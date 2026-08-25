@@ -304,5 +304,27 @@ dev.layers[0].bindings[16] = raw;
 ed.layers[0].bindings[16] = raw;
 eq("untouched read-back is not a change", diffProfiles(dev, ed, findLayout(12, 2)).length, 0);
 
+
+console.log("\nREADME stays in step with the code");
+{
+  // The model table in the README is generated from LAYOUTS. If someone adds a
+  // model and forgets the docs, this fails rather than shipping a stale table.
+  const { readFileSync } = await import("node:fs");
+  const readme = readFileSync(join(here, "README.md"), "utf8");
+  const body = /\| Keys \| Knobs \| Grid \| Confirmed on hardware \|\n\|[^\n]*\|\n([\s\S]*?)\n\n/.exec(readme);
+  eq("model table present in README", !!body, true);
+  const documented = body[1].trim().split("\n").map(line => {
+    const c = line.split("|").map(x => x.trim()).filter(Boolean);
+    return { keys: c[0] === "—" ? 0 : +c[0], knobs: +c[1], grid: c[2] };
+  });
+  eq("  documents every model", documented.length, LAYOUTS.length);
+  const mismatch = LAYOUTS.find((l, i) => {
+    const d = documented[i];
+    const grid = l.keys ? `${l.cols}×${l.rows}` : "—";
+    return !d || d.keys !== l.keys || d.knobs !== l.knobs || d.grid !== grid;
+  });
+  eq("  every row matches LAYOUTS", mismatch ? `${mismatch.keys}/${mismatch.knobs} is wrong or missing` : "all match", "all match");
+}
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

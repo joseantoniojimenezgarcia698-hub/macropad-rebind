@@ -55,19 +55,48 @@ keypad*, *12 key macro keyboard with 2 knobs*, *15 key shortcut pad*, *mini
 gaming keypad*, *one-handed keyboard*, *Photoshop shortcut pad*, *streaming
 keypad*, *volume knob keypad*.
 
-**All 17 layouts are supported:**
-
-| Knobs | Key counts |
-|---|---|
-| none | 2, 4, 5, 6 |
-| 1 | 3, 4, 6 |
-| 2 | 6, 9, 12 |
-| 3 | 4, 9, 11, 12, 15 |
-
-The layout is read from the keypad itself. If the on-screen grid doesn't match
-your hardware, pick the right model from the dropdown.
+**All 17 layouts are supported**, from 2 keys up to 15 keys and 3 knobs — see
+[Verified models](#verified-models) below. The layout is read from the keypad
+itself; if the on-screen grid doesn't match your hardware, pick the right model
+from the dropdown.
 
 <br clear="all">
+
+---
+
+## Verified models
+
+All 17 are supported. The layout is read from the keypad, but the **grid shape** —
+how the keys are physically arranged, and therefore which slot is which key — has
+only been checked on one unit so far. The rest is inferred.
+
+**If your model shows a dash, a one-minute check helps everyone:** connect, and
+see whether the on-screen grid matches your hardware. Either answer is useful —
+[open a layout report](../../issues/new?template=layout-report.yml) and it gets
+marked confirmed, or corrected.
+
+| Keys | Knobs | Grid | Confirmed on hardware |
+|---:|---:|:---:|:---|
+| — | 1 | — | — |
+| — | 2 | — | — |
+| 2 | 0 | 2×1 | — |
+| 3 | 1 | 3×1 | — |
+| 4 | 0 | 4×1 | — |
+| 4 | 1 | 4×1 | — |
+| 4 | 3 | 4×1 | — |
+| 5 | 0 | 5×1 | — |
+| 6 | 0 | 3×2 | — |
+| 6 | 1 | 3×2 | — |
+| 6 | 2 | 3×2 | — |
+| 9 | 2 | 3×3 | — |
+| 9 | 3 | 3×3 | — |
+| 11 | 3 | 4×3 | — |
+| 12 | 2 | 3×4 | ✅ yes |
+| 12 | 3 | 4×3 | — |
+| 15 | 3 | 5×3 | — |
+
+1 of 17 confirmed so far. A wrong grid is a one-line fix, and the
+tests catch it immediately.
 
 ---
 
