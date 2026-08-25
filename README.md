@@ -1,16 +1,18 @@
 # Macropad Rebind
 
-**Configure your cheap AliExpress macropad from any browser. No install, no
-driver, no Windows.**
+**Configure your cheap AliExpress macropad on Linux, macOS, Windows, ChromeOS
+or Android — from a browser tab. Nothing to install, no drivers.**
 
 Those little USB keypads with knobs — sold on AliExpress, Temu, Amazon and eBay
 under a hundred different brand names — almost all use the same WCH CH57x chip,
 and almost all ship with the same 32-bit Windows-only configuration tool. No
 Linux build, no macOS build, and nothing at all if you are on a Chromebook.
 
-Macropad Rebind replaces it. It is a single HTML file that talks to the keypad over
-WebHID, so it runs from Linux, Windows, macOS, ChromeOS and Android with nothing
-installed.
+Macropad Rebind replaces it. It is a single HTML file that talks to the keypad
+over WebHID, so the same page configures your device from Linux, macOS, Windows,
+ChromeOS or Android — no installer, no driver, no vendor software. It needs a
+Chromium-based browser (Chrome, Edge, Brave, Opera, Vivaldi); Firefox and Safari
+have not implemented WebHID.
 
 It also **reads the configuration already on your keypad**, which the original
 software's ecosystem could not do — so you can see what your keys are set to
