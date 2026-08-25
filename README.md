@@ -3,6 +3,14 @@
 **Configure your cheap AliExpress macropad on Linux, macOS, Windows, ChromeOS
 or Android — from a browser tab. Nothing to install, no drivers.**
 
+### ▶ [Open it now — jvspier.github.io/macropad-rebind](https://jvspier.github.io/macropad-rebind/)
+
+<p align="center">
+  <img src="images/screenshot.png"
+       alt="Macropad Rebind: the on-screen keypad with two knobs and twelve keys, a binding editor, backlight controls and a device log"
+       width="720">
+</p>
+
 Those little USB keypads with knobs — sold on AliExpress, Temu, Amazon and eBay
 under a hundred different brand names — almost all use the same WCH CH57x chip,
 and almost all ship with the same 32-bit Windows-only configuration tool. No
@@ -22,9 +30,14 @@ before you change anything.
 
 ## Will it work with my keypad?
 
+<img src="images/mykeypad.jpg"
+     alt="A 12-key, 2-knob CH57x macropad with red backlighting"
+     align="right" width="250">
+
 If your keypad came with software called `MINI_KEYBOARD`, `KEY_PRO`,
 `Mini Keyboard`, or a generic unbranded `.exe`, it is almost certainly one of
-these.
+these. They all look roughly like the one on the right — a small slab of keys
+with one to three knurled knobs along the top.
 
 **Check the USB ID.** The vendor must be `1189`:
 
@@ -54,6 +67,8 @@ keypad*, *volume knob keypad*.
 The layout is read from the keypad itself. If the on-screen grid doesn't match
 your hardware, pick the right model from the dropdown.
 
+<br clear="all">
+
 ---
 
 ## Quick start
@@ -63,7 +78,11 @@ your hardware, pick the right model from the dropdown.
 It must be served over `http://localhost` or `https://` — browsers only
 allow USB access from a secure origin.
 
-Download or clone this repo, then in that folder run:
+**The quickest route is [the hosted copy](https://jvspier.github.io/macropad-rebind/)** —
+it is served over HTTPS, which is all the browser needs. Nothing is uploaded
+anywhere; the page talks straight to the USB device.
+
+To run it yourself instead, download or clone this repo, then in that folder run:
 
 ```bash
 python3 -m http.server 8000
