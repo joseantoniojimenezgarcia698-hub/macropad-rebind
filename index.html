@@ -1,0 +1,1484 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keypad Bench — 1189:8842 configurator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* ------------------------------------------------------------------
+   Instrument-panel palette. Deliberately single-theme: this is a bench
+   utility for a black keypad with red LEDs, and every colour is painted
+   explicitly so it never borrows a host theme.
+   ------------------------------------------------------------------ */
+:root{
+  --bg:#0d0f12; --panel:#14171b; --panel-2:#191d22; --raise:#20252b;
+  --line:#272d34; --line-soft:#1e2329;
+  --ink:#e7ebf0; --ink-2:#aeb7c2; --dim:#79838f;
+  --led:#ff4a38; --led-dim:#7d241c; --led-soft:#2a1310;
+  --ok:#35c2a5; --ok-soft:#0f2a26;
+  --warn:#f0a92a; --warn-soft:#2a1f0c;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --sans:"IBM Plex Sans",system-ui,sans-serif;
+  --disp:"Archivo","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+button,select,input,textarea{font-family:inherit;font-size:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--led);outline-offset:2px}
+
+/* ---- shell ---- */
+.top{
+  display:flex;flex-wrap:wrap;gap:1rem;align-items:center;justify-content:space-between;
+  padding:.85rem clamp(1rem,3vw,2rem);
+  border-bottom:1px solid var(--line);background:var(--panel);
+  position:sticky;top:0;z-index:20;
+}
+.brand{display:flex;align-items:baseline;gap:.7rem;min-width:0}
+.brand h1{font-family:var(--disp);font-weight:700;font-size:1.12rem;letter-spacing:-.02em;margin:0;white-space:nowrap}
+.brand .sub{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.top-actions{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+
+.status{
+  display:inline-flex;align-items:center;gap:.45rem;
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;
+  padding:.3rem .55rem;border-radius:3px;background:var(--panel-2);color:var(--dim);
+  border:1px solid var(--line);white-space:nowrap;
+}
+.status::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.status.on{color:var(--ok);background:var(--ok-soft);border-color:var(--ok)}
+.status.err{color:var(--led);background:var(--led-soft);border-color:var(--led-dim)}
+
+button{
+  background:var(--raise);border:1px solid var(--line);color:var(--ink);
+  padding:.44rem .8rem;border-radius:3px;cursor:pointer;
+  font-weight:500;transition:background .13s ease,border-color .13s ease;
+}
+button:hover:not(:disabled){background:#2a3037;border-color:#39414a}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:var(--led);border-color:var(--led);color:#fff;font-weight:600}
+button.primary:hover:not(:disabled){background:#ff6252;border-color:#ff6252}
+button.ghost{background:transparent}
+button.tiny{padding:.2rem .45rem;font-size:.78rem}
+
+main{
+  display:grid;gap:1.25rem;
+  grid-template-columns:minmax(0,1fr) minmax(320px,400px);
+  align-items:start;
+  padding:clamp(1rem,3vw,2rem);
+  max-width:1340px;margin:0 auto;
+}
+@media (max-width:1000px){ main{grid-template-columns:minmax(0,1fr)} }
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:4px}
+.card > header{
+  display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:space-between;
+  padding:.7rem .95rem;border-bottom:1px solid var(--line-soft);
+}
+.card > header h2{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--dim);font-weight:500;margin:0;
+}
+.card .body{padding:1rem}
+.stack{display:flex;flex-direction:column;gap:1.25rem;min-width:0}
+
+/* ---- layer tabs ---- */
+.tabs{display:flex;gap:2px;background:var(--panel-2);padding:2px;border-radius:3px}
+.tabs button{
+  background:transparent;border:0;padding:.3rem .75rem;border-radius:2px;
+  font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;color:var(--dim);
+}
+.tabs button[aria-selected="true"]{background:var(--raise);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+
+/* ---- the keypad ---- */
+.device{
+  display:flex;flex-direction:column;gap:1.1rem;align-items:center;
+  padding:1.5rem 1rem;
+  background:linear-gradient(180deg,#101317,#0b0d10);
+  border-radius:4px;border:1px solid var(--line-soft);
+}
+.knobs{display:flex;gap:2.2rem;justify-content:center;flex-wrap:wrap}
+.knob{display:flex;flex-direction:column;align-items:center;gap:.45rem}
+.knob-dial{
+  width:74px;height:74px;border-radius:50%;
+  background:radial-gradient(circle at 38% 30%,#3a4149,#171a1e 70%);
+  border:1px solid #2e353d;
+  display:grid;place-items:center;position:relative;
+  box-shadow:0 4px 14px rgba(0,0,0,.5);
+}
+.knob-dial::after{content:"";position:absolute;top:7px;width:2px;height:16px;border-radius:1px;background:#c3ccd6}
+.knob-dial button{
+  width:38px;height:38px;border-radius:50%;padding:0;
+  font-family:var(--mono);font-size:.62rem;
+  background:#0f1215;border:1px solid #2e353d;color:var(--ink-2);
+}
+.knob-dial button.bound{border-color:var(--led);color:var(--led)}
+.knob-dial button.sel{background:var(--led);border-color:var(--led);color:#fff}
+.knob-rot{display:flex;gap:.35rem}
+.knob-rot button{
+  font-family:var(--mono);font-size:.66rem;padding:.22rem .5rem;min-width:44px;
+  background:#0f1215;
+}
+.knob-rot button.bound{border-color:var(--led);color:var(--led)}
+.knob-rot button.sel{background:var(--led);border-color:var(--led);color:#fff}
+.knob-label{font-family:var(--mono);font-size:.62rem;letter-spacing:.11em;text-transform:uppercase;color:var(--dim)}
+
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.55rem;width:min(100%,340px)}
+.keycap{
+  aspect-ratio:1/.86;border-radius:5px;padding:.35rem .3rem;
+  background:linear-gradient(180deg,#22272d,#171b1f);
+  border:1px solid #2b3138;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15rem;
+  cursor:pointer;position:relative;overflow:hidden;
+  box-shadow:0 2px 0 #0c0e11,0 5px 12px rgba(0,0,0,.4);
+  transition:transform .1s ease,border-color .13s ease;
+}
+.keycap:hover{border-color:#3c444d;transform:translateY(-1px)}
+.keycap.bound{border-color:var(--led-dim)}
+.keycap.bound::before{
+  content:"";position:absolute;inset:auto 0 0 0;height:2px;background:var(--led);opacity:.8;
+}
+.keycap.sel{border-color:var(--led);box-shadow:0 0 0 1px var(--led),0 2px 0 #0c0e11,0 6px 18px rgba(255,74,56,.22);transform:translateY(-1px)}
+.keycap .kn{font-family:var(--mono);font-size:.58rem;color:var(--dim);letter-spacing:.06em}
+.keycap .kv{
+  font-family:var(--disp);font-weight:600;font-size:.8rem;line-height:1.15;text-align:center;
+  word-break:break-word;max-width:100%;
+}
+.keycap.empty .kv{color:var(--dim);font-weight:500;font-style:italic}
+
+/* ---- editor ---- */
+.field{display:flex;flex-direction:column;gap:.35rem;min-width:0}
+.field > label,.legend{
+  font-family:var(--mono);font-size:.66rem;letter-spacing:.11em;text-transform:uppercase;color:var(--dim);
+}
+select,input[type=text],input[type=number],textarea{
+  background:var(--panel-2);border:1px solid var(--line);border-radius:3px;
+  padding:.4rem .55rem;width:100%;
+}
+textarea{font-family:var(--mono);font-size:.78rem;resize:vertical;line-height:1.5}
+.row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:flex-end}
+.row > *{flex:1 1 0;min-width:90px}
+
+.seg{display:flex;gap:2px;background:var(--panel-2);padding:2px;border-radius:3px;border:1px solid var(--line)}
+.seg button{
+  flex:1;background:transparent;border:0;padding:.32rem .4rem;border-radius:2px;
+  font-size:.82rem;color:var(--dim);
+}
+.seg button[aria-pressed="true"]{background:var(--raise);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+
+.mods{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.3rem}
+.mods button{
+  font-family:var(--mono);font-size:.68rem;padding:.3rem .2rem;text-align:center;
+  background:var(--panel-2);
+}
+.mods button[aria-pressed="true"]{background:var(--led);border-color:var(--led);color:#fff}
+
+.steps{display:flex;flex-direction:column;gap:.4rem}
+.step{
+  display:flex;gap:.4rem;align-items:center;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:3px;padding:.35rem .45rem;
+}
+.step .n{font-family:var(--mono);font-size:.65rem;color:var(--dim);flex:none;width:1.3rem}
+.step .txt{font-family:var(--mono);font-size:.8rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.capture{
+  border:1px dashed var(--line);border-radius:3px;padding:.7rem;text-align:center;
+  background:var(--panel-2);cursor:pointer;color:var(--ink-2);font-size:.86rem;
+}
+.capture.armed{border-color:var(--led);border-style:solid;background:var(--led-soft);color:var(--led)}
+
+.hint{font-size:.8rem;color:var(--dim);line-height:1.5}
+.hint code,code{
+  font-family:var(--mono);font-size:.86em;background:var(--panel-2);
+  border:1px solid var(--line-soft);border-radius:2px;padding:.05em .3em;
+}
+
+/* ---- LED ---- */
+.swatches{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:.3rem}
+.swatch{
+  aspect-ratio:1;border-radius:3px;border:1px solid var(--line);cursor:pointer;padding:0;
+}
+.swatch[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink);border-color:var(--ink)}
+
+/* ---- log ---- */
+.log{
+  font-family:var(--mono);font-size:.72rem;line-height:1.6;
+  background:#0a0c0e;border:1px solid var(--line-soft);border-radius:3px;
+  padding:.6rem .7rem;max-height:230px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:var(--ink-2);
+}
+.log .t{color:var(--dim)}
+.log .w{color:var(--warn)}
+.log .e{color:var(--led)}
+.log .g{color:var(--ok)}
+
+.note{
+  display:flex;gap:.55rem;align-items:flex-start;
+  background:var(--warn-soft);border:1px solid var(--warn);border-radius:3px;
+  padding:.6rem .7rem;font-size:.82rem;color:#f2d9a8;line-height:1.5;
+}
+.note b{color:var(--warn);font-family:var(--disp)}
+.unsupported{
+  margin:clamp(1rem,3vw,2rem);padding:1.2rem;border-radius:4px;
+  background:var(--led-soft);border:1px solid var(--led-dim);color:#ffd3cd;
+}
+.unsupported h2{font-family:var(--disp);margin:0 0 .5rem;font-size:1.05rem;color:var(--led)}
+.hidden{display:none !important}
+button.danger{background:var(--led-soft);border-color:var(--led-dim);color:var(--led);font-weight:600}
+button.danger:hover:not(:disabled){background:var(--led);border-color:var(--led);color:#fff}
+button.wide{width:100%;padding:.6rem .8rem}
+.presets{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.3rem}
+.presets button{font-family:var(--mono);font-size:.7rem;padding:.35rem .2rem}
+.dz{display:flex;flex-direction:column;gap:.5rem}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">
+    <h1>Keypad Bench</h1>
+    <span class="sub">1189:8842 &middot; 12 keys + 2 knobs</span>
+  </div>
+  <div class="top-actions">
+    <span class="status" id="status">disconnected</span>
+    <button id="btnConnect" class="primary">Connect keypad</button>
+    <button id="btnRead" disabled>Read from keypad</button>
+    <button id="btnWrite" disabled>Write to keypad</button>
+    <button id="btnExport" class="ghost">Export</button>
+    <button id="btnImport" class="ghost">Import</button>
+    <input type="file" id="fileImport" accept="application/json" class="hidden">
+  </div>
+</div>
+
+<div id="noWebHID" class="unsupported hidden">
+  <h2>This browser has no WebHID</h2>
+  <p><code>navigator.hid</code> is unavailable, so nothing here can reach the keypad. Use Chrome, Edge, Opera or another Chromium browser — Firefox and Safari have not implemented WebHID.</p>
+  <p>Also note that <code>navigator.hid</code> defaults to <code>self</code> in Permissions Policy, so this page must be the top-level document: it will not work inside a cross-origin iframe.</p>
+</div>
+
+<main id="app">
+  <!-- ============ left column ============ -->
+  <div class="stack">
+    <section class="card">
+      <header>
+        <h2>Layout</h2>
+        <div class="tabs" id="layerTabs" role="tablist"></div>
+      </header>
+      <div class="body">
+        <div class="device">
+          <div class="knobs" id="knobs"></div>
+          <div class="grid" id="grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <header><h2>Backlight — this layer</h2></header>
+      <div class="body stack" style="gap:.9rem">
+        <div class="field">
+          <label for="ledMode">Mode</label>
+          <select id="ledMode">
+            <option value="off">Off</option>
+            <option value="backlight">Backlight — steady</option>
+            <option value="shock">Shock</option>
+            <option value="shock2">Shock 2</option>
+            <option value="press">Light up on press</option>
+          </select>
+        </div>
+        <div class="field" id="ledColorField">
+          <span class="legend">Colour</span>
+          <div class="swatches" id="ledColors"></div>
+        </div>
+        <p class="hint" id="ledCode"></p>
+
+        <button id="btnApplyLed" class="wide" disabled>Apply lighting now</button>
+        <p class="hint">Sends this layer's backlight record straight away, without a full write.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <header>
+        <h2>Device log</h2>
+        <div style="display:flex;gap:.4rem">
+          <button class="tiny ghost" id="btnDetect" disabled>Detect layout</button>
+          <button class="tiny ghost" id="btnClearLog">Clear</button>
+        </div>
+      </header>
+      <div class="body stack" style="gap:.7rem">
+        <div class="log" id="log">Ready. Nothing has been sent to the keypad.</div>
+        <p class="hint"><b>Read from keypad</b> uses <code>0xFA</code> and <code>0xFB</code> — both confirmed against this hardware. They are reads and change nothing on the device. A binding loaded from the keypad is written back <em>byte for byte</em> unless you edit it, so fields this tool has not fully decoded survive a round trip untouched.</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ right column ============ -->
+  <div class="stack">
+    <section class="card">
+      <header>
+        <h2 id="editorTitle">Nothing selected</h2>
+        <button class="tiny ghost" id="btnClearBinding" disabled>Clear</button>
+      </header>
+      <div class="body stack" style="gap:1rem" id="editor">
+        <p class="hint">Pick a key or a knob action on the left to bind it.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <header><h2>Reset</h2></header>
+      <div class="body dz">
+        <button id="btnClearAll" class="wide">Clear this layer in the editor</button>
+        <p class="hint">Empties every binding on <b id="clearLayerName">layer 1</b> <em>in this page only</em>.
+        The keypad keeps working exactly as it does now until you write.</p>
+        <button id="btnBlank" class="wide danger" disabled>Blank this layer on the keypad</button>
+        <p class="hint">Writes an empty binding to every key and knob action on
+        <b id="blankLayerName">layer 1</b>, so nothing on that layer does anything. Other layers are untouched.
+        If the layer holds macros this <b>erases them from the device</b> — export first.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <header><h2>Before you write</h2></header>
+      <div class="body stack" style="gap:.8rem">
+        <div class="note">
+          <div><b>One write, all three layers.</b> Writing sends every binding you have set, layer by layer, then the backlight for each layer. Slots you never touched are left alone.</div>
+        </div>
+        <p class="hint">Bindings are kept in this browser under <code>localStorage</code>, so the page remembers them. That is a convenience, not a backup — use <b>Export</b> for anything you care about.</p>
+        <p class="hint">This page never sends <code>0xEF</code>, the command that puts the keypad into its bootloader.</p>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+"use strict";
+
+/* ==================================================================
+   Protocol constants.
+
+   Wire format, confirmed two ways: the vendor app's own hid_write()
+   uses a 65-byte buffer (report id 0x03 + 64 data bytes), and the
+   device's report descriptor declares 64-byte in/out reports on a
+   vendor collection (usage page 0xFF00). WebHID's sendReport() takes
+   the report id separately, so payloads here are 64 bytes and index 0
+   is the command byte.
+
+   Message layout for a binding, from ch57x-keyboard-tool's k884x.rs
+   (which carries unit tests against real USB captures) and matching
+   the record structure recovered from widget.o:
+
+     [0]      0xFE          write
+     [1]      slot id       1..15 keys, 16.. knob actions, 0xB0 = LED
+     [2]      layer + 1
+     [3]      action type   1 keyboard, 2 media, 3 mouse, 5 delay
+     [4..8]   0
+     [9]      step count / mouse action / LED flag
+     [10..]   payload
+   ================================================================== */
+const REPORT_ID  = 0x03;
+const REPORT_LEN = 64;
+
+const CMD_WRITE  = 0xFE;
+const CMD_COMMIT = 0xFD;   // sent as FD FE FF
+const CMD_SEP    = 0xAA;   // sent as AA AA
+
+const TYPE_KEYBOARD = 1, TYPE_MEDIA = 2, TYPE_MOUSE = 3, TYPE_DELAY = 5;
+const LED_SLOT = 0xB0;
+
+const N_KEYS  = 12;
+const N_KNOBS = 2;
+const N_LAYERS = 3;
+const MAX_STEPS = 18;
+
+/* ---- HID keyboard usage table (same ordering ch57x uses) ---- */
+const KEYS = (() => {
+  const t = [];
+  const add = (name, code) => t.push({ name, code });
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach((c, i) => add(c, 0x04 + i));
+  ["1","2","3","4","5","6","7","8","9","0"].forEach((c, i) => add(c, 0x1e + i));
+  [["Enter",0x28],["Esc",0x29],["Backspace",0x2a],["Tab",0x2b],["Space",0x2c],
+   ["-",0x2d],["=",0x2e],["[",0x2f],["]",0x30],["\\",0x31],["#",0x32],[";",0x33],
+   ["'",0x34],["`",0x35],[",",0x36],[".",0x37],["/",0x38],["CapsLock",0x39]
+  ].forEach(([n,c]) => add(n,c));
+  for (let i = 1; i <= 12; i++) add("F" + i, 0x3a + i - 1);
+  [["PrintScreen",0x46],["ScrollLock",0x47],["Pause",0x48],["Insert",0x49],
+   ["Home",0x4a],["PageUp",0x4b],["Delete",0x4c],["End",0x4d],["PageDown",0x4e],
+   ["Right",0x4f],["Left",0x50],["Down",0x51],["Up",0x52],["NumLock",0x53],
+   ["Num /",0x54],["Num *",0x55],["Num -",0x56],["Num +",0x57],["Num Enter",0x58]
+  ].forEach(([n,c]) => add(n,c));
+  for (let i = 1; i <= 9; i++) add("Num " + i, 0x59 + i - 1);
+  [["Num 0",0x62],["Num .",0x63],["IntlBackslash",0x64],["Menu",0x65],
+   ["Power",0x66],["Num =",0x67]].forEach(([n,c]) => add(n,c));
+  for (let i = 13; i <= 24; i++) add("F" + i, 0x68 + i - 13);
+  return t;
+})();
+const KEY_BY_CODE = new Map(KEYS.map(k => [k.code, k.name]));
+
+/* ---- browser KeyboardEvent.code -> HID usage, for "press a key" capture ---- */
+const CAPTURE = (() => {
+  const m = new Map();
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach((c,i) => m.set("Key"+c, 0x04+i));
+  for (let i = 1; i <= 9; i++) m.set("Digit"+i, 0x1e+i-1);
+  m.set("Digit0", 0x27);
+  Object.entries({
+    Enter:0x28, Escape:0x29, Backspace:0x2a, Tab:0x2b, Space:0x2c,
+    Minus:0x2d, Equal:0x2e, BracketLeft:0x2f, BracketRight:0x30, Backslash:0x31,
+    Semicolon:0x33, Quote:0x34, Backquote:0x35, Comma:0x36, Period:0x37,
+    Slash:0x38, CapsLock:0x39, PrintScreen:0x46, ScrollLock:0x47, Pause:0x48,
+    Insert:0x49, Home:0x4a, PageUp:0x4b, Delete:0x4c, End:0x4d, PageDown:0x4e,
+    ArrowRight:0x4f, ArrowLeft:0x50, ArrowDown:0x51, ArrowUp:0x52,
+    NumLock:0x53, NumpadDivide:0x54, NumpadMultiply:0x55, NumpadSubtract:0x56,
+    NumpadAdd:0x57, NumpadEnter:0x58, Numpad0:0x62, NumpadDecimal:0x63,
+    IntlBackslash:0x64, ContextMenu:0x65, NumpadEqual:0x67,
+  }).forEach(([k,v]) => m.set(k,v));
+  for (let i = 1; i <= 9; i++) m.set("Numpad"+i, 0x59+i-1);
+  for (let i = 1; i <= 24; i++) m.set("F"+i, i <= 12 ? 0x3a+i-1 : 0x68+i-13);
+  return m;
+})();
+
+const MODIFIERS = [
+  { bit:0x01, label:"Ctrl"  }, { bit:0x02, label:"Shift"  },
+  { bit:0x04, label:"Alt"   }, { bit:0x08, label:"Super"  },
+  { bit:0x10, label:"RCtrl" }, { bit:0x20, label:"RShift" },
+  { bit:0x40, label:"RAlt"  }, { bit:0x80, label:"RSuper" },
+];
+
+const MEDIA = [
+  ["Volume up",0xe9], ["Volume down",0xea], ["Mute",0xe2],
+  ["Play / pause",0xcd], ["Next track",0xb5], ["Previous track",0xb6],
+  ["Stop",0xb7], ["Brightness up",0x6f], ["Brightness down",0x70],
+  ["Calculator",0x192], ["Favourites",0x182], ["Lock screen",0x19e],
+  ["Browser home",0x223], ["Browser back",0x224], ["Browser forward",0x225],
+];
+
+const LED_COLORS = [
+  ["White",  "#f2f4f7", 0], ["Red",    "#ff4a38", 1], ["Orange", "#ff8c2b", 2],
+  ["Yellow", "#f5d020", 3], ["Green",  "#3fc96a", 4], ["Cyan",   "#2fd0d6", 5],
+  ["Blue",   "#4a86ff", 6], ["Purple", "#a566ff", 7],
+];
+const LED_MODE_CODE = { off:0, backlight:1, shock:2, shock2:3, press:4 };
+
+/* ------------------------------------------------------------------
+   Device variant, command 0xFC.  NOT wired to any control — read this
+   before you change that.
+
+   0xFC tells the keypad which hardware variant it is. Payload is
+   [0xFC, 0xFC, keys, knobs]. The vendor UI offered the 15 combinations
+   below, matching the layout list in Identify_KeyBoard_style().
+
+   Send the wrong one and the firmware drives only that many keys: a
+   12-key pad told (3, 1) lights three keys and ignores the other nine.
+   Key bindings survive — only the declared geometry changes — but the
+   keypad looks broken and the cause is not discoverable from the UI.
+
+   Recovery is variantReport(12, 2) followed by an LED record and a
+   commit. Kept here because that recovery is worth having, and because
+   the constant documents a hazard that is otherwise invisible.
+   ------------------------------------------------------------------ */
+const DEVICE_VARIANTS = [
+  [0, 0], [2, 0], [3, 1], [4, 0], [4, 1],
+  [5, 0], [6, 0], [6, 1], [6, 2], [9, 2],
+  [9, 3], [11, 3], [12, 2], [12, 3], [15, 3],
+];
+
+const KNOB_ACTIONS = ["ccw", "press", "cw"];
+const KNOB_GLYPH   = { ccw:"↺", press:"●", cw:"↻" };
+
+/* Slot ids: keys are 1..12, knob k action a -> 16 + 3k + a.
+   Knob 0 is the physically LEFT knob and knob 1 the right — verified on
+   hardware, and not something you can infer from a config where both are
+   bound to volume. Actions run ccw, press, cw. */
+const keySlot  = i => i + 1;
+const knobSlot = (k, a) => 16 + 3 * k + a;
+
+/* ------------------------------------------------------------------
+   Physical arrangement.
+
+   Slot ids run UP each column, starting at the bottom-left — the corner
+   furthest from the knobs, which is where the key matrix begins:
+
+       slot 4   slot 8   slot 12      <- top row, nearest the knobs
+       slot 3   slot 7   slot 11
+       slot 2   slot 6   slot 10
+       slot 1   slot 5   slot  9      <- bottom row
+
+   So slot = column * 4 + (4 - row), with row counted from the top.
+   Verified against this hardware: the owner's media keys sit on the
+   bottom row and read back as slots 1, 5 and 9.
+
+   KEY_ORDER is DOM order — left to right, then top to bottom.
+   ------------------------------------------------------------------ */
+const GRID_ROWS = 4, GRID_COLS = 3;
+const KEY_ORDER = (() => {
+  const order = [];
+  for (let r = 0; r < GRID_ROWS; r++)
+    for (let c = 0; c < GRID_COLS; c++)
+      order.push(c * GRID_ROWS + (GRID_ROWS - r));
+  return order;                       // [4,8,12, 3,7,11, 2,6,10, 1,5,9]
+})();
+
+/* Key 1..12 as a person reads the keypad (top-left to bottom-right) mapped
+   to the slot id the protocol uses, and back. The UI speaks positions; the
+   wire speaks slots. */
+const SLOT_OF_POS  = pos => KEY_ORDER[pos - 1];
+const POS_OF_SLOT  = new Map(KEY_ORDER.map((slot, i) => [slot, i + 1]));
+
+/* ==================================================================
+   State
+   ================================================================== */
+const STORE_KEY = "keypad-bench.profile.v1";
+
+function blankProfile() {
+  return {
+    layers: Array.from({ length: N_LAYERS }, () => ({
+      bindings: {},                        // slot id -> binding
+      led: { mode: "backlight", color: 1 },
+    })),
+  };
+}
+
+let profile = loadProfile();
+let layer = 0;
+let sel = null;              // { slot, label }
+let device = null;
+let captureArmed = false;
+
+function loadProfile() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return blankProfile();
+    const p = JSON.parse(raw);
+    if (!p || !Array.isArray(p.layers) || p.layers.length !== N_LAYERS) return blankProfile();
+    for (const l of p.layers) {
+      if (!l.bindings || typeof l.bindings !== "object") l.bindings = {};
+      if (!l.led) l.led = { mode: "backlight", color: 1 };
+    }
+    return p;
+  } catch { return blankProfile(); }
+}
+function saveProfile() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(profile)); } catch { /* private mode */ }
+}
+
+const curLayer  = () => profile.layers[layer];
+const bindingFor = slot => curLayer().bindings[slot] || null;
+
+/* ==================================================================
+   Binding -> human label
+   ================================================================== */
+function modLabel(mask) {
+  return MODIFIERS.filter(m => mask & m.bit).map(m => m.label).join("+");
+}
+function stepLabel(s) {
+  const mods = modLabel(s.mods);
+  const key  = s.code ? (KEY_BY_CODE.get(s.code) || "0x" + s.code.toString(16)) : "";
+  return [mods, key].filter(Boolean).join("+") || "—";
+}
+function bindingLabel(b) {
+  if (!b) return "unset";
+  if (b.type === "key")   return b.steps.map(stepLabel).join(" , ");
+  if (b.type === "media") return (MEDIA.find(m => m[1] === b.media) || ["media"])[0];
+  if (b.type === "mouse") {
+    const btn = ["", "Left", "Right", "", "Middle"][b.buttons] || "";
+    if (b.action === "click") return "Click " + (btn || b.buttons);
+    if (b.action === "wheel") return "Wheel " + (b.wheel > 0 ? "+" : "") + b.wheel;
+    if (b.action === "move")  return `Move ${b.dx},${b.dy}`;
+    if (b.action === "drag")  return `Drag ${btn} ${b.dx},${b.dy}`;
+  }
+  if (b.type === "raw") return "raw " + hex(b.raw.slice(3, 8));
+  return "unset";
+}
+
+/* ==================================================================
+   Message building
+   ================================================================== */
+function msg(bytes) {
+  if (bytes.length > REPORT_LEN) throw new Error("report overflow");
+  const out = new Uint8Array(REPORT_LEN);
+  out.set(bytes, 0);
+  return out;
+}
+
+/** All reports needed to program one slot. */
+function bindingReports(slot, b) {
+  const head = [CMD_WRITE, slot, layer + 1];
+  let m;
+
+  // A binding that came off the device and has not been edited is written
+  // back byte for byte. The read reply and the write message share a layout
+  // — only byte 0 differs (0xFA vs 0xFE) — so re-encoding it through our own
+  // model could silently change fields we have not fully decoded.
+  if (b._raw) {
+    const reports = [msg([CMD_WRITE, ...b._raw.slice(1)])];
+    reports.push(msg([CMD_SEP, CMD_SEP]));
+    reports.push(msg([CMD_COMMIT, 0xFE, 0xFF]));
+    reports.push(msg([CMD_SEP, CMD_SEP]));
+    return reports;
+  }
+
+  if (b.type === "key") {
+    const steps = b.steps.slice(0, MAX_STEPS);
+    // A lone modifier-only step is sent with count 0 so it can combine
+    // with a following key — this mirrors the vendor behaviour.
+    const count = (steps.length === 1 && !steps[0].code) ? 0 : steps.length;
+    const body = [];
+    for (const s of steps) body.push(s.mods & 0xff, s.code || 0);
+    m = [...head, TYPE_KEYBOARD, 0,0,0,0,0, count, ...body];
+
+  } else if (b.type === "media") {
+    const c = b.media & 0xffff;
+    m = [...head, TYPE_MEDIA, 0,0,0,0,0, 0, c & 0xff, (c >> 8) & 0xff, 0,0,0,0];
+
+  } else if (b.type === "mouse") {
+    const mod = b.mod || 0;
+    const btn = b.buttons || 0;
+    if (b.action === "click")      m = [...head, TYPE_MOUSE, 0,0,0,0,0, 0x01, mod, btn];
+    else if (b.action === "wheel") m = [...head, TYPE_MOUSE, 0,0,0,0,0, 0x03, mod, 0, 0, 0, i8(b.wheel)];
+    else if (b.action === "move")  m = [...head, TYPE_MOUSE, 0,0,0,0,0, 0x05, mod, 0, i8(b.dx), i8(b.dy)];
+    else                           m = [...head, TYPE_MOUSE, 0,0,0,0,0, 0x05, mod, btn, i8(b.dx), i8(b.dy)];
+
+  } else if (b.type === "raw") {
+    m = [CMD_WRITE, ...b.raw.slice(1)];
+
+  } else {
+    return [];
+  }
+
+  const reports = [msg(m)];
+  if (b.type === "key" && b.delay > 0) {
+    const d = Math.min(6000, b.delay | 0);
+    reports.push(msg([...head, TYPE_DELAY, d & 0xff, (d >> 8) & 0xff]));
+  }
+  reports.push(msg([CMD_SEP, CMD_SEP]));
+  reports.push(msg([CMD_COMMIT, 0xFE, 0xFF]));
+  reports.push(msg([CMD_SEP, CMD_SEP]));
+  return reports;
+}
+
+/** The record this device stores for a key that does nothing. */
+function emptyReports(slot, layerIdx) {
+  return [
+    msg([CMD_WRITE, slot, layerIdx + 1, TYPE_KEYBOARD, 0,0,0,0,0, 0x01, 0x00, 0x00]),
+    msg([CMD_SEP, CMD_SEP]),
+    msg([CMD_COMMIT, 0xFE, 0xFF]),
+    msg([CMD_SEP, CMD_SEP]),
+  ];
+}
+
+/** Declare the keypad's hardware geometry. See DEVICE_VARIANTS. */
+function variantReport(keys, knobs) {
+  return msg([0xFC, 0xFC, keys & 0xff, knobs & 0xff]);
+}
+
+function ledReports(layerIdx, led) {
+  const mode = LED_MODE_CODE[led.mode] ?? 0;
+  let code;
+  if (led.mode === "off") code = 0;
+  else if (led.mode === "backlight" && led.color === 0) code = 5;   // white is its own mode
+  else code = ((led.color & 0x0f) << 4) | mode;
+  return [
+    msg([CMD_WRITE, LED_SLOT, layerIdx + 1, 0x08, 0,0,0,0,0, 0x01, 0x00, code]),
+    msg([CMD_COMMIT, 0xFE, 0xFF]),
+  ];
+}
+
+const i8 = v => ((v | 0) + 256) & 0xff;
+const hex = u8 => Array.from(u8, b => b.toString(16).padStart(2, "0")).join(" ");
+
+/* ------------------------------------------------------------------
+   Decoding a stored record.
+
+   Confirmed against this hardware: the 0xFA reply uses the same field
+   layout as a 0xFE write, with 0xFA in byte 0.
+
+     [0] 0xFA   [1] slot   [2] layer(1-based)   [3] type
+     [9] count / mouse action   [10..] payload
+   ------------------------------------------------------------------ */
+function decodeRecord(d) {
+  const type = d[3], count = d[9];
+  const raw = Array.from(d);
+
+  if (type === TYPE_KEYBOARD) {
+    const steps = [];
+    for (let i = 0; i < Math.min(count || 1, MAX_STEPS); i++) {
+      const mods = d[10 + 2 * i], code = d[11 + 2 * i];
+      if (!mods && !code) continue;            // padding pair
+      steps.push({ mods, code });
+    }
+    if (!steps.length) return null;            // slot is genuinely empty
+    return { type: "key", steps, delay: 0, _raw: raw };
+  }
+
+  if (type === TYPE_MEDIA) {
+    const media = d[10] | (d[11] << 8);
+    if (!media) return null;
+    return { type: "media", media, _raw: raw };
+  }
+
+  if (type === TYPE_MOUSE) {
+    const action = d[9], mod = d[10], buttons = d[11];
+    // 0x04 is what this device reports for a wheel binding; ch57x writes
+    // 0x03 for the same thing. Both are accepted here, and the original
+    // bytes are kept so an untouched binding round-trips exactly.
+    if (action === 0x01) return { type:"mouse", action:"click", buttons, mod, wheel:1, dx:0, dy:0, _raw: raw };
+    if (action === 0x03 || action === 0x04)
+      return { type:"mouse", action:"wheel", buttons:0, mod, wheel: s8(d[14]), dx:0, dy:0, _raw: raw };
+    if (action === 0x05)
+      return { type:"mouse", action: buttons ? "drag" : "move", buttons, mod,
+               wheel:1, dx: s8(d[12]), dy: s8(d[13]), _raw: raw };
+    return { type: "raw", raw, _raw: raw };
+  }
+
+  if (type === 0) return null;                 // never programmed
+  return { type: "raw", raw, _raw: raw };
+}
+
+const s8 = v => (v & 0x80) ? v - 256 : v;
+
+/** Drop the verbatim bytes — the binding no longer matches what's on the device. */
+function touch(b) { if (b) delete b._raw; }
+
+/* ==================================================================
+   Device I/O
+   ================================================================== */
+const $ = id => document.getElementById(id);
+const logEl = $("log");
+
+function log(text, cls) {
+  const t = new Date().toLocaleTimeString("en-GB", { hour12: false });
+  const span = document.createElement("span");
+  if (cls) span.className = cls;
+  span.textContent = text;
+  const line = document.createElement("div");
+  const stamp = document.createElement("span");
+  stamp.className = "t";
+  stamp.textContent = t + "  ";
+  line.append(stamp, span);
+  if (logEl.firstChild && logEl.textContent.startsWith("Ready.")) logEl.textContent = "";
+  logEl.append(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setStatus(text, cls) {
+  const el = $("status");
+  el.textContent = text;
+  el.className = "status" + (cls ? " " + cls : "");
+}
+
+async function connect() {
+  try {
+    const list = await navigator.hid.requestDevice({
+      filters: [{ vendorId: 0x1189, usagePage: 0xff00, usage: 0x01 }],
+    });
+    if (!list.length) { log("No device picked.", "w"); return; }
+    device = list[0];
+    if (!device.opened) await device.open();
+    device.addEventListener("inputreport", onInput);
+    setStatus("connected", "on");
+    log(`Opened ${device.productName || "keypad"} — ${device.collections.length} collection(s).`, "g");
+    $("btnWrite").disabled = false;
+    $("btnDetect").disabled = false;
+    $("btnRead").disabled = false;
+    $("btnBlank").disabled = false;
+    renderLed();          // device-dependent controls take state at render time
+    navigator.hid.addEventListener("disconnect", e => { if (e.device === device) disconnected(); });
+  } catch (err) {
+    setStatus("error", "err");
+    log("Connect failed: " + err.message, "e");
+    if (/open|permission|access|denied/i.test(err.message)) {
+      log("On Linux this is almost always hidraw permissions. Install linux/60-ch57x-keypad.rules", "w");
+      log("into /etc/udev/rules.d/, reload, and replug. The file must be numbered below 70 —", "w");
+      log("systemd's 70-uaccess.rules is what acts on the uaccess tag.", "w");
+    }
+  }
+}
+
+function disconnected() {
+  device = null;
+  setStatus("disconnected");
+  $("btnWrite").disabled = true;
+  $("btnDetect").disabled = true;
+  $("btnRead").disabled = true;
+  $("btnBlank").disabled = true;
+  renderLed();
+  log("Device disconnected.", "w");
+}
+
+let collector = null;
+function onInput(e) {
+  const bytes = new Uint8Array(e.data.buffer, e.data.byteOffset, e.data.byteLength);
+  if (collector) collector.push(bytes);
+  log(`in  ${hex(bytes.subarray(0, 16))}`);
+}
+
+/** Wait for up to `want` input reports, or until `ms` elapses. */
+async function collect(want, ms) {
+  const got = [];
+  collector = got;
+  const t0 = Date.now();
+  while (got.length < want && Date.now() - t0 < ms) await sleep(15);
+  collector = null;
+  return got;
+}
+
+
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function send(report, label) {
+  await device.sendReport(REPORT_ID, report);
+  log(`out ${hex(report.subarray(0, 16))}${label ? "   " + label : ""}`);
+  await sleep(6);
+}
+
+async function writeAll() {
+  if (!device) return;
+  const btn = $("btnWrite");
+  btn.disabled = true;
+  try {
+    let slots = 0;
+    const saved = layer;
+    for (let l = 0; l < N_LAYERS; l++) {
+      layer = l;
+      const lay = profile.layers[l];
+      for (const [slot, b] of Object.entries(lay.bindings)) {
+        if (!b) continue;
+        for (const r of bindingReports(Number(slot), b)) await send(r);
+        slots++;
+      }
+      for (const r of ledReports(l, lay.led)) await send(r);
+    }
+    layer = saved;
+    log(`Done — ${slots} binding${slots === 1 ? "" : "s"} and ${N_LAYERS} backlight settings written.`, "g");
+  } catch (err) {
+    log("Write failed: " + err.message, "e");
+  } finally {
+    btn.disabled = !device;
+  }
+}
+
+/** Write an empty binding to every key and knob action, on all layers. */
+/** Send just this layer's backlight record, without a full write. */
+async function applyLed() {
+  if (!device) return;
+  const btn = $("btnApplyLed");
+  btn.disabled = true;
+  try {
+    for (const r of ledReports(layer, curLayer().led)) await send(r);
+    log(`Backlight applied to layer ${layer + 1}.`, "g");
+  } catch (err) {
+    log("Lighting failed: " + err.message, "e");
+  } finally {
+    btn.disabled = !device;
+  }
+}
+
+async function blankKeypad() {
+  if (!device) return;
+  if (!confirm(
+    `Blank layer ${layer + 1} on the keypad?\n\n` +
+    `Every key and knob action on this layer is overwritten with an empty binding. ` +
+    `Any macros on layer ${layer + 1} will be gone from the device.\n\n` +
+    `Other layers are not touched. Export first if you have not.`)) return;
+  if (!confirm(`Last check — layer ${layer + 1} cannot be recovered from the device. Continue?`)) return;
+
+  const btn = $("btnBlank");
+  btn.disabled = true;
+  try {
+    const slots = [];
+    for (let i = 0; i < N_KEYS; i++) slots.push(keySlot(i));
+    for (let k = 0; k < N_KNOBS; k++) for (let a = 0; a < 3; a++) slots.push(knobSlot(k, a));
+
+    for (const slot of slots) for (const r of emptyReports(slot, layer)) await send(r);
+    curLayer().bindings = {};
+    sel = null;
+    saveProfile();
+    renderAll();
+    log(`Layer ${layer + 1} blanked — ${slots.length} slot(s). Lighting left alone.`, "g");
+  } catch (err) {
+    log("Blank failed: " + err.message, "e");
+  } finally {
+    btn.disabled = !device;
+  }
+}
+
+function clearEditor() {
+  const n = Object.values(curLayer().bindings).filter(Boolean).length;
+  if (n && !confirm(
+    `Clear all ${n} binding(s) on layer ${layer + 1} from the editor?\n\n` +
+    `Other layers and the keypad itself are not touched.`)) return;
+  curLayer().bindings = {};
+  sel = null;
+  saveProfile();
+  renderAll();
+  log(`Layer ${layer + 1} cleared in the editor. Nothing was sent to the keypad.`, "g");
+}
+
+async function detect() {
+  log("0xFB — identify layout (read only).", "w");
+  const got = (await Promise.all([collect(1, 600), send(msg([0xFB, 0xFB, 0xFB]))]))[0];
+  if (!got.length) { log("No reply.", "w"); return null; }
+  const keys = got[0][1], knobs = got[0][2];
+  log(`Layout: ${keys} keys, ${knobs} knobs.`, "g");
+  return { keys, knobs };
+}
+
+/** Read every stored record and load it into the editor. */
+async function readAll() {
+  if (!device) return;
+  const btn = $("btnRead");
+  btn.disabled = true;
+  try {
+    const bound = Object.values(profile.layers).reduce(
+      (n, l) => n + Object.values(l.bindings).filter(Boolean).length, 0);
+    if (bound && !confirm(
+      `Replace the ${bound} binding(s) currently in the editor with what is on the keypad?\n\n` +
+      `Nothing is written to the device. Export first if you want to keep them.`)) {
+      return;
+    }
+
+    const layout = await detect();
+    const keys  = layout?.keys  ?? N_KEYS;
+    const knobs = layout?.knobs ?? N_KNOBS;
+    const want  = keys + 3 * knobs;
+
+    const next = blankProfile();
+    let total = 0;
+
+    for (let l = 0; l < N_LAYERS; l++) {
+      log(`0xFA — reading layer ${l + 1} (read only).`, "w");
+      const got = (await Promise.all([
+        collect(want, 2500),
+        send(msg([0xFA, keys, knobs, l + 1])),
+      ]))[0];
+
+      for (const d of got) {
+        // Layer 3 comes back out of order on this hardware, so trust the
+        // slot byte in the reply rather than the arrival order.
+        const slot = d[1];
+        if (!slot || slot > 21) continue;
+        const b = decodeRecord(d);
+        if (b) { next.layers[l].bindings[slot] = b; total++; }
+      }
+      log(`layer ${l + 1}: ${got.length} record(s), ${Object.keys(next.layers[l].bindings).length} bound.`);
+    }
+
+    // Backlight is not reported by 0xFA — keep whatever was set here.
+    for (let l = 0; l < N_LAYERS; l++) next.layers[l].led = profile.layers[l].led;
+
+    profile = next;
+    sel = null;
+    saveProfile();
+    renderAll();
+    log(`Loaded ${total} binding(s) from the keypad.`, "g");
+  } catch (err) {
+    log("Read failed: " + err.message, "e");
+  } finally {
+    btn.disabled = !device;
+  }
+}
+
+/* ==================================================================
+   Rendering — device
+   ================================================================== */
+function renderTabs() {
+  const wrap = $("layerTabs");
+  wrap.textContent = "";
+  for (let l = 0; l < N_LAYERS; l++) {
+    const n = Object.values(profile.layers[l].bindings).filter(Boolean).length;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.role = "tab";
+    b.setAttribute("aria-selected", l === layer ? "true" : "false");
+    b.textContent = `Layer ${l + 1}${n ? ` · ${n}` : ""}`;
+    b.onclick = () => { layer = l; sel = null; renderAll(); };
+    wrap.append(b);
+  }
+}
+
+function renderGrid() {
+  const g = $("grid");
+  g.textContent = "";
+  KEY_ORDER.forEach((slot, i) => {
+    const pos = i + 1;
+    const b = bindingFor(slot);
+    const cap = document.createElement("button");
+    cap.type = "button";
+    cap.className = "keycap" + (b ? " bound" : " empty") + (sel?.slot === slot ? " sel" : "");
+    const kn = document.createElement("span");
+    kn.className = "kn";
+    kn.textContent = "K" + pos;
+    const kv = document.createElement("span");
+    kv.className = "kv";
+    kv.textContent = b ? bindingLabel(b) : "unset";
+    cap.append(kn, kv);
+    cap.title = `Key ${pos} (device slot ${slot}) — ` + (b ? bindingLabel(b) : "unbound");
+    cap.onclick = () => select(slot, "Key " + pos);
+    g.append(cap);
+  });
+}
+
+function renderKnobs() {
+  const wrap = $("knobs");
+  wrap.textContent = "";
+  for (let k = 0; k < N_KNOBS; k++) {
+    const box = document.createElement("div");
+    box.className = "knob";
+
+    const dial = document.createElement("div");
+    dial.className = "knob-dial";
+    const pressSlot = knobSlot(k, 1);
+    const pb = document.createElement("button");
+    pb.type = "button";
+    pb.textContent = KNOB_GLYPH.press;
+    pb.className = (bindingFor(pressSlot) ? "bound" : "") + (sel?.slot === pressSlot ? " sel" : "");
+    pb.title = "Knob " + (k + 1) + " press — " + bindingLabel(bindingFor(pressSlot));
+    pb.onclick = () => select(pressSlot, `Knob ${k + 1} press`);
+    dial.append(pb);
+
+    const rot = document.createElement("div");
+    rot.className = "knob-rot";
+    for (const a of [0, 2]) {
+      const slot = knobSlot(k, a);
+      const rb = document.createElement("button");
+      rb.type = "button";
+      rb.textContent = KNOB_GLYPH[KNOB_ACTIONS[a]];
+      rb.className = (bindingFor(slot) ? "bound" : "") + (sel?.slot === slot ? " sel" : "");
+      rb.title = `Knob ${k + 1} ${KNOB_ACTIONS[a]} — ` + bindingLabel(bindingFor(slot));
+      rb.onclick = () => select(slot, `Knob ${k + 1} ${KNOB_ACTIONS[a]}`);
+      rot.append(rb);
+    }
+
+    const lbl = document.createElement("span");
+    lbl.className = "knob-label";
+    lbl.textContent = "Knob " + (k + 1);
+
+    box.append(dial, rot, lbl);
+    wrap.append(box);
+  }
+}
+
+function renderLed() {
+  const led = curLayer().led;
+  $("ledMode").value = led.mode;
+  $("ledColorField").classList.toggle("hidden", led.mode === "off");
+
+  const sw = $("ledColors");
+  sw.textContent = "";
+  for (const [name, css, idx] of LED_COLORS) {
+    // White exists only for the steady backlight mode.
+    if (idx === 0 && led.mode !== "backlight") continue;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "swatch";
+    b.style.background = css;
+    b.title = name;
+    b.setAttribute("aria-pressed", led.color === idx ? "true" : "false");
+    b.onclick = () => { led.color = idx; saveProfile(); renderLed(); };
+    sw.append(b);
+  }
+
+  $("btnApplyLed").disabled = !device;
+  $("clearLayerName").textContent = `layer ${layer + 1}`;
+  $("blankLayerName").textContent = `layer ${layer + 1}`;
+  const r = ledReports(layer, led)[0];
+  $("ledCode").innerHTML = `Layer ${layer + 1} packet: <code>03 ${hex(r.subarray(0, 12))}</code>`;
+
+}
+
+/* ==================================================================
+   Rendering — editor
+   ================================================================== */
+function select(slot, label) {
+  sel = { slot, label };
+  captureArmed = false;
+  renderAll();
+}
+
+function ensureBinding(type) {
+  const l = curLayer();
+  let b = l.bindings[sel.slot];
+  if (!b || b.type !== type) {
+    b = type === "key"   ? { type:"key", steps:[], delay:0 }
+      : type === "media" ? { type:"media", media:0xe9 }
+      : { type:"mouse", action:"click", buttons:1, mod:0, wheel:1, dx:0, dy:0 };
+    l.bindings[sel.slot] = b;
+  }
+  return b;
+}
+
+function renderEditor() {
+  const host = $("editor");
+  host.textContent = "";
+  $("editorTitle").textContent = sel ? sel.label : "Nothing selected";
+  $("btnClearBinding").disabled = !sel || !bindingFor(sel.slot);
+
+  if (!sel) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = "Pick a key or a knob action on the left to bind it.";
+    host.append(p);
+    return;
+  }
+
+  const b = bindingFor(sel.slot);
+  const type = b?.type || null;
+
+  {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.style.marginTop = "-.4rem";
+    p.innerHTML = `Device slot <code>${sel.slot}</code>` +
+      (POS_OF_SLOT.has(sel.slot) ? ` &middot; key ${POS_OF_SLOT.get(sel.slot)} counting left to right, top to bottom` : "");
+    host.append(p);
+  }
+
+  if (b?._raw) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.innerHTML = `<span style="color:var(--ok)">Read from the keypad.</span> Written back byte for byte unless you change it.`;
+    host.append(p);
+  }
+  if (type === "raw") {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.innerHTML = `This slot holds a record this tool does not decode (type <code>${b.raw[3]}</code>). ` +
+                  `It is preserved exactly: <code>${hex(b.raw.slice(0, 16))}</code>`;
+    host.append(p);
+    return;
+  }
+
+  // ---- action type selector ----
+  const tf = document.createElement("div");
+  tf.className = "field";
+  tf.innerHTML = `<span class="legend">Action</span>`;
+  const seg = document.createElement("div");
+  seg.className = "seg";
+  for (const [val, lbl] of [["key","Keyboard"],["media","Media"],["mouse","Mouse"]]) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = lbl;
+    btn.setAttribute("aria-pressed", type === val ? "true" : "false");
+    btn.onclick = () => { ensureBinding(val); saveProfile(); renderAll(); };
+    seg.append(btn);
+  }
+  tf.append(seg);
+  host.append(tf);
+
+  if (!type) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = "Choose what this control should do.";
+    host.append(p);
+    return;
+  }
+
+  if (type === "key")   renderKeyEditor(host, b);
+  if (type === "media") renderMediaEditor(host, b);
+  if (type === "mouse") renderMouseEditor(host, b);
+
+  const first = bindingReports(sel.slot, b)[0];
+  if (first) {
+    const preview = document.createElement("p");
+    preview.className = "hint";
+    preview.innerHTML = `Sends <code>03 ${hex(first.subarray(0, 16))}</code>`;
+    host.append(preview);
+  }
+}
+
+function renderKeyEditor(host, b) {
+  // draft step being composed
+  b._mods ??= 0;
+
+  const cap = document.createElement("div");
+  cap.className = "capture" + (captureArmed ? " armed" : "");
+  cap.tabIndex = 0;
+  cap.textContent = captureArmed
+    ? "Listening — press the shortcut now (Esc to stop)"
+    : "Click here, then press a key to add it";
+  cap.onclick = () => { captureArmed = !captureArmed; renderEditor(); if (captureArmed) cap.focus(); };
+  host.append(cap);
+
+  const modField = document.createElement("div");
+  modField.className = "field";
+  modField.innerHTML = `<span class="legend">Modifiers for the next key</span>`;
+  const mods = document.createElement("div");
+  mods.className = "mods";
+  for (const m of MODIFIERS) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = m.label;
+    btn.setAttribute("aria-pressed", (b._mods & m.bit) ? "true" : "false");
+    btn.onclick = () => { b._mods ^= m.bit; renderEditor(); };
+    mods.append(btn);
+  }
+  modField.append(mods);
+  host.append(modField);
+
+  const pickRow = document.createElement("div");
+  pickRow.className = "row";
+  const keyField = document.createElement("div");
+  keyField.className = "field";
+  keyField.innerHTML = `<label for="keyPick">Key</label>`;
+  const selKey = document.createElement("select");
+  selKey.id = "keyPick";
+  selKey.append(new Option("— modifiers only —", "0"));
+  for (const k of KEYS) selKey.append(new Option(k.name, String(k.code)));
+  keyField.append(selKey);
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.textContent = "Add step";
+  addBtn.style.flex = "0 0 auto";
+  addBtn.onclick = () => addStep(b, b._mods, Number(selKey.value));
+  pickRow.append(keyField, addBtn);
+  host.append(pickRow);
+
+  // ---- sequence ----
+  const seqField = document.createElement("div");
+  seqField.className = "field";
+  seqField.innerHTML = `<span class="legend">Sequence — ${b.steps.length}/${MAX_STEPS}</span>`;
+  const list = document.createElement("div");
+  list.className = "steps";
+  if (!b.steps.length) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = "Empty. Add at least one step.";
+    list.append(p);
+  }
+  b.steps.forEach((s, i) => {
+    const row = document.createElement("div");
+    row.className = "step";
+    const n = document.createElement("span");
+    n.className = "n";
+    n.textContent = i + 1;
+    const txt = document.createElement("span");
+    txt.className = "txt";
+    txt.textContent = stepLabel(s);
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "tiny ghost";
+    del.textContent = "×";
+    del.title = "Remove";
+    del.onclick = () => { touch(b); b.steps.splice(i, 1); saveProfile(); renderAll(); };
+    row.append(n, txt, del);
+    list.append(row);
+  });
+  seqField.append(list);
+  host.append(seqField);
+
+  const dField = document.createElement("div");
+  dField.className = "field";
+  dField.innerHTML = `<label for="delay">Delay between steps (ms, 0–6000)</label>`;
+  const d = document.createElement("input");
+  d.type = "number"; d.id = "delay"; d.min = "0"; d.max = "6000"; d.step = "10";
+  d.value = String(b.delay || 0);
+  d.oninput = () => {
+    touch(b);
+    b.delay = Math.max(0, Math.min(6000, Number(d.value) || 0));
+    saveProfile();
+  };
+  dField.append(d);
+  host.append(dField);
+}
+
+function addStep(b, mods, code) {
+  if (!mods && !code) return;
+  touch(b);
+  if (b.steps.length >= MAX_STEPS) { log("Sequence is full (18 steps).", "w"); return; }
+  b.steps.push({ mods, code });
+  b._mods = 0;
+  saveProfile();
+  renderAll();
+}
+
+function renderMediaEditor(host, b) {
+  const f = document.createElement("div");
+  f.className = "field";
+  f.innerHTML = `<label for="mediaPick">Media key</label>`;
+  const s = document.createElement("select");
+  s.id = "mediaPick";
+  for (const [name, code] of MEDIA) {
+    const o = new Option(name, String(code));
+    if (code === b.media) o.selected = true;
+    s.append(o);
+  }
+  s.onchange = () => { touch(b); b.media = Number(s.value); saveProfile(); renderAll(); };
+  f.append(s);
+  host.append(f);
+
+  const hint = document.createElement("p");
+  hint.className = "hint";
+  hint.textContent = "This is what your knobs do out of the box — volume up and down on rotation.";
+  host.append(hint);
+}
+
+function renderMouseEditor(host, b) {
+  const af = document.createElement("div");
+  af.className = "field";
+  af.innerHTML = `<span class="legend">Mouse action</span>`;
+  const seg = document.createElement("div");
+  seg.className = "seg";
+  for (const [val, lbl] of [["click","Click"],["wheel","Wheel"],["move","Move"],["drag","Drag"]]) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = lbl;
+    btn.setAttribute("aria-pressed", b.action === val ? "true" : "false");
+    btn.onclick = () => { touch(b); b.action = val; saveProfile(); renderAll(); };
+    seg.append(btn);
+  }
+  af.append(seg);
+  host.append(af);
+
+  if (b.action === "click" || b.action === "drag") {
+    const bf = document.createElement("div");
+    bf.className = "field";
+    bf.innerHTML = `<span class="legend">Button</span>`;
+    const seg2 = document.createElement("div");
+    seg2.className = "seg";
+    for (const [val, lbl] of [[1,"Left"],[2,"Right"],[4,"Middle"]]) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = lbl;
+      btn.setAttribute("aria-pressed", b.buttons === val ? "true" : "false");
+      btn.onclick = () => { touch(b); b.buttons = val; saveProfile(); renderAll(); };
+      seg2.append(btn);
+    }
+    bf.append(seg2);
+    host.append(bf);
+  }
+
+  if (b.action === "wheel") {
+    host.append(numberField("Wheel delta (−127…127)", b.wheel, v => { touch(b); b.wheel = v; }, -127, 127));
+  }
+  if (b.action === "move" || b.action === "drag") {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.append(
+      numberField("dx", b.dx, v => { touch(b); b.dx = v; }, -127, 127),
+      numberField("dy", b.dy, v => { touch(b); b.dy = v; }, -127, 127),
+    );
+    host.append(row);
+  }
+}
+
+function numberField(label, value, set, min, max) {
+  const f = document.createElement("div");
+  f.className = "field";
+  const l = document.createElement("label");
+  l.textContent = label;
+  const i = document.createElement("input");
+  i.type = "number"; i.value = String(value ?? 0);
+  i.min = String(min); i.max = String(max);
+  i.oninput = () => {
+    set(Math.max(min, Math.min(max, Number(i.value) || 0)));
+    saveProfile();
+  };
+  f.append(l, i);
+  return f;
+}
+
+/* ==================================================================
+   Key capture
+   ================================================================== */
+window.addEventListener("keydown", e => {
+  if (!captureArmed || !sel) return;
+  const b = curLayer().bindings[sel.slot];
+  if (!b || b.type !== "key") return;
+
+  if (e.code === "Escape") { captureArmed = false; renderEditor(); e.preventDefault(); return; }
+
+  // Bare modifier presses just latch into the pending mask.
+  const bare = { ControlLeft:0x01, ShiftLeft:0x02, AltLeft:0x04, MetaLeft:0x08,
+                 ControlRight:0x10, ShiftRight:0x20, AltRight:0x40, MetaRight:0x80 }[e.code];
+  if (bare) { b._mods |= bare; renderEditor(); e.preventDefault(); return; }
+
+  const code = CAPTURE.get(e.code);
+  if (code === undefined) return;
+  e.preventDefault();
+  let mods = b._mods || 0;
+  if (e.ctrlKey)  mods |= 0x01;
+  if (e.shiftKey) mods |= 0x02;
+  if (e.altKey)   mods |= 0x04;
+  if (e.metaKey)  mods |= 0x08;
+  addStep(b, mods, code);
+});
+
+/* ==================================================================
+   Import / export
+   ================================================================== */
+function exportProfile() {
+  const clean = JSON.parse(JSON.stringify(profile, (k, v) => (k === "_mods" ? undefined : v)));
+  const blob = new Blob([JSON.stringify(clean, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "keypad-profile.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  log("Profile exported.", "g");
+}
+
+$("fileImport").onchange = async e => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  try {
+    const p = JSON.parse(await file.text());
+    if (!p || !Array.isArray(p.layers) || p.layers.length !== N_LAYERS) throw new Error("not a keypad profile");
+    profile = p;
+    for (const l of profile.layers) {
+      l.bindings ||= {};
+      l.led ||= { mode: "backlight", color: 1 };
+    }
+    sel = null;
+    saveProfile();
+    renderAll();
+    log("Profile imported — nothing sent yet. Press Write to apply.", "g");
+  } catch (err) {
+    log("Import failed: " + err.message, "e");
+  }
+  e.target.value = "";
+};
+
+/* ==================================================================
+   Wire-up
+   ================================================================== */
+function renderAll() { renderTabs(); renderGrid(); renderKnobs(); renderLed(); renderEditor(); }
+
+$("btnConnect").onclick = connect;
+$("btnWrite").onclick = writeAll;
+$("btnDetect").onclick = detect;
+$("btnRead").onclick = readAll;
+$("btnExport").onclick = exportProfile;
+$("btnClearAll").onclick = clearEditor;
+$("btnBlank").onclick = blankKeypad;
+$("btnApplyLed").onclick = applyLed;
+$("btnImport").onclick = () => $("fileImport").click();
+$("btnClearLog").onclick = () => { logEl.textContent = "Cleared."; };
+$("btnClearBinding").onclick = () => {
+  if (!sel) return;
+  delete curLayer().bindings[sel.slot];
+  saveProfile();
+  renderAll();
+};
+$("ledMode").onchange = e => {
+  const led = curLayer().led;
+  led.mode = e.target.value;
+  if (led.mode !== "backlight" && led.color === 0) led.color = 1;
+  saveProfile();
+  renderLed();
+};
+
+if (!("hid" in navigator)) {
+  $("noWebHID").classList.remove("hidden");
+  $("btnConnect").disabled = true;
+  setStatus("unsupported", "err");
+}
+
+renderAll();
+</script>
+</body>
+</html>

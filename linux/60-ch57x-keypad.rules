@@ -1,0 +1,12 @@
+# CH57x-based mini keypad (the MINI_KEYBOARD.exe hardware family).
+# Vendor 0x1189, product ids used across the family:
+#   8830 8831 8832 8833 8840 8842 8850
+#
+# Grants the user of the active local seat read/write on the keypad's HID
+# nodes, so a configurator (ch57x-keyboard-tool, probe.py, or a WebHID page
+# in Chrome) can talk to it without root.
+#
+# MUST be numbered below 70. systemd's 70-uaccess.rules is what acts on the
+# uaccess tag; a rule that adds the tag later than that is silently ignored.
+KERNEL=="hidraw*", SUBSYSTEMS=="usb", ATTRS{idVendor}=="1189", \
+  ATTRS{idProduct}=="8830|8831|8832|8833|8840|8842|8850", TAG+="uaccess"
