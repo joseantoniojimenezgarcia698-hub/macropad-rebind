@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Keypad Bench — 1189:8842 configurator</title>
+<title>Rebind — CH57x macropad configurator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -262,8 +262,8 @@ dialog h3{font-family:var(--disp);font-size:1.05rem;margin:0;letter-spacing:-.01
 
 <div class="top">
   <div class="brand">
-    <h1>Keypad Bench</h1>
-    <span class="sub">1189:8842 &middot; 12 keys + 2 knobs</span>
+    <h1>Rebind</h1>
+    <span class="sub" id="brandSub">CH57x macropad</span>
   </div>
   <div class="top-actions">
     <span class="status" id="status">disconnected</span>
@@ -595,7 +595,7 @@ function posOfSlot(l) {
 /* ==================================================================
    State
    ================================================================== */
-const STORE_KEY = "keypad-bench.profile.v1";
+const STORE_KEY = "rebind.profile.v1";
 
 function blankProfile() {
   return {
@@ -615,7 +615,7 @@ let captureArmed = false;
 
 function loadProfile() {
   try {
-    const raw = localStorage.getItem(STORE_KEY);
+    const raw = localStorage.getItem(STORE_KEY) || localStorage.getItem("keypad-bench.profile.v1");
     if (!raw) return blankProfile();
     const p = JSON.parse(raw);
     if (!p || !Array.isArray(p.layers) || p.layers.length !== N_LAYERS) return blankProfile();
@@ -626,10 +626,10 @@ function loadProfile() {
     return p;
   } catch { return blankProfile(); }
 }
-const LAYOUT_KEY = "keypad-bench.layout.v1";
+const LAYOUT_KEY = "rebind.layout.v1";
 function loadLayout() {
   try {
-    const raw = localStorage.getItem(LAYOUT_KEY);
+    const raw = localStorage.getItem(LAYOUT_KEY) || localStorage.getItem("keypad-bench.layout.v1");
     if (!raw) return { ...DEFAULT_LAYOUT };
     const l = JSON.parse(raw);
     if (![l.keys, l.knobs, l.cols, l.rows].every(n => Number.isInteger(n) && n >= 0)) throw 0;
