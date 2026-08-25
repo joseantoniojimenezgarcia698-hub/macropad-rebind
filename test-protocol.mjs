@@ -22,9 +22,11 @@ const core = js.slice(
 
 const mod = await import(
   "data:text/javascript;base64," +
-  Buffer.from(core + "\nexport {bindingReports, ledReports, keySlot, knobSlot, decodeRecord, touch, KEY_ORDER, SLOT_OF_POS, POS_OF_SLOT, emptyReports, variantReport, DEVICE_VARIANTS};\n").toString("base64")
+  Buffer.from(core + "\nexport {bindingReports, ledReports, keySlot, knobSlot, decodeRecord, touch, emptyReports, variantReport, DEVICE_VARIANTS, textToSteps, diffProfiles, blankProfile, LAYOUTS, findLayout, gridOrder, posOfSlot, DEFAULT_LAYOUT};\n").toString("base64")
 );
-const { bindingReports, ledReports, keySlot, knobSlot, decodeRecord, touch, KEY_ORDER, SLOT_OF_POS, POS_OF_SLOT, emptyReports, variantReport, DEVICE_VARIANTS } = mod;
+const { bindingReports, ledReports, keySlot, knobSlot, decodeRecord, touch,
+        emptyReports, variantReport, DEVICE_VARIANTS, textToSteps, diffProfiles,
+        blankProfile, LAYOUTS, findLayout, gridOrder, posOfSlot, DEFAULT_LAYOUT } = mod;
 
 let pass = 0, fail = 0;
 const hx = a => Array.from(a, b => b.toString(16).padStart(2, "0")).join(" ");
@@ -167,28 +169,48 @@ eq("  delta preserved", rt[14], 0x01);
 
 
 console.log("\nphysical grid mapping");
+const L12 = findLayout(12, 2);
+eq("12+2 is a known model", !!L12, true);
+eq("  grid is 3 wide, 4 tall", `${L12.cols}x${L12.rows}`, "3x4");
 // Slot ids run UP each column from the bottom-left, so reading order is:
-eq("grid order", KEY_ORDER.join(","), "4,8,12,3,7,11,2,6,10,1,5,9");
-eq("  all 12 slots present once", new Set(KEY_ORDER).size, 12);
+eq("grid order", gridOrder(L12).join(","), "4,8,12,3,7,11,2,6,10,1,5,9");
+eq("  all 12 slots present once", new Set(gridOrder(L12)).size, 12);
 // The owner's media keys are on the bottom row and read back as 1, 5, 9.
-eq("bottom row is slots 1,5,9",  KEY_ORDER.slice(9).join(","), "1,5,9");
-eq("top row is slots 4,8,12",    KEY_ORDER.slice(0,3).join(","), "4,8,12");
-eq("second row is slots 3,7,11", KEY_ORDER.slice(3,6).join(","), "3,7,11");
-eq("third row is slots 2,6,10",  KEY_ORDER.slice(6,9).join(","), "2,6,10");
-
+eq("bottom row is slots 1,5,9",  gridOrder(L12).slice(9).join(","), "1,5,9");
+eq("top row is slots 4,8,12",    gridOrder(L12).slice(0,3).join(","), "4,8,12");
+eq("second row is slots 3,7,11", gridOrder(L12).slice(3,6).join(","), "3,7,11");
+eq("third row is slots 2,6,10",  gridOrder(L12).slice(6,9).join(","), "2,6,10");
 
 console.log("\nposition <-> slot");
-// What the user sees as key 1..12 (reading order) vs the wire's slot id.
+const P12 = posOfSlot(L12);
 for (const [pos, slot] of [[1,4],[2,8],[3,12],[4,3],[5,7],[6,11],[7,2],[8,6],[9,10],[10,1],[11,5],[12,9]])
-  eq(`key ${pos} -> slot`, SLOT_OF_POS(pos), slot);
-eq("round trip pos->slot->pos", [...Array(12)].every((_, i) => POS_OF_SLOT.get(SLOT_OF_POS(i + 1)) === i + 1), true);
+  eq(`key ${pos} -> slot`, gridOrder(L12)[pos - 1], slot);
+eq("round trip pos->slot->pos",
+   [...Array(12)].every((_, i) => P12.get(gridOrder(L12)[i]) === i + 1), true);
 // The owner's WELCOME macro is stored on slot 2 and is physically the 7th key.
-eq("slot 2 shows as key", POS_OF_SLOT.get(2), 7);
-// Media keys read back as slots 1/5/9 and must land on the bottom row, 10/11/12.
-eq("slot 1 (Prev) shows as key",  POS_OF_SLOT.get(1), 10);
-eq("slot 5 (Play) shows as key",  POS_OF_SLOT.get(5), 11);
-eq("slot 9 (Next) shows as key",  POS_OF_SLOT.get(9), 12);
+eq("slot 2 shows as key", P12.get(2), 7);
+eq("slot 1 (Prev) shows as key", P12.get(1), 10);
+eq("slot 5 (Play) shows as key", P12.get(5), 11);
+eq("slot 9 (Next) shows as key", P12.get(9), 12);
+eq("default layout is 12+2", `${DEFAULT_LAYOUT.keys}/${DEFAULT_LAYOUT.knobs}`, "12/2");
 
+console.log("\nother models");
+eq("every layout has a grid big enough", LAYOUTS.every(l => l.cols * l.rows >= l.keys), true);
+eq("no duplicate models", new Set(LAYOUTS.map(l => `${l.keys}/${l.knobs}`)).size, LAYOUTS.length);
+for (const l of LAYOUTS.filter(x => x.keys)) {
+  const order = gridOrder(l).filter(Boolean);
+  const ok = order.length === l.keys && new Set(order).size === l.keys
+             && Math.min(...order) === 1 && Math.max(...order) === l.keys;
+  eq(`${l.keys}k/${l.knobs}n covers slots 1..${l.keys}`, ok, true);
+}
+// 11 keys in a 4x3 grid leaves exactly one hole, and it must read as a hole.
+eq("11+3 leaves one empty cell", gridOrder(findLayout(11,3)).filter(x => x === 0).length, 1);
+eq("  and still shows 11 keys",  gridOrder(findLayout(11,3)).filter(Boolean).length, 11);
+// 12+2 and 12+3 are genuinely different shapes, not a typo.
+eq("12+3 is 4x3, not 3x4", `${findLayout(12,3).cols}x${findLayout(12,3).rows}`, "4x3");
+eq("unknown model returns null", findLayout(7, 9), null);
+eq("every 0xFC variant has a layout",
+   DEVICE_VARIANTS.every(([k, n]) => k === 0 || !!findLayout(k, n)), true);
 
 console.log("\nblanking");
 // The device itself stores an unbound key as type 1, count 1, pair (0,0) —
@@ -213,6 +235,74 @@ check("15 keys, 3 knobs",              variantReport(15, 3), [0x03,0xfc,0xfc,0x0
 eq("12+2 is a known variant", DEVICE_VARIANTS.some(([k, n]) => k === 12 && n === 2), true);
 eq("no variant byte collides with a command",
    DEVICE_VARIANTS.every(([k]) => k !== 0xfe && k !== 0xef && k !== 0xfd), true);
+
+
+console.log("\ntext to key steps");
+let t = textToSteps("abc");
+eq("abc -> 3 steps", t.steps.length, 3);
+eq("  'a' is 0x04 unshifted", `${t.steps[0].mods},${t.steps[0].code}`, "0,4");
+t = textToSteps("A");
+eq("'A' uses Shift", t.steps[0].mods, 0x02);
+eq("  ... on the same code as 'a'", t.steps[0].code, 0x04);
+t = textToSteps("Welcome@YSP123");
+eq("the owner's macro -> 14 steps", t.steps.length, 14);
+eq("  'W' is Shift+0x1a", `${t.steps[0].mods},${t.steps[0].code}`, "2,26");
+eq("  'e' is plain 0x08",  `${t.steps[1].mods},${t.steps[1].code}`, "0,8");
+eq("  '@' is Shift+0x1f",  `${t.steps[7].mods},${t.steps[7].code}`, "2,31");
+eq("  'Y' is Shift+0x1c",  `${t.steps[8].mods},${t.steps[8].code}`, "2,28");
+eq("  '1' is plain 0x1e",  `${t.steps[11].mods},${t.steps[11].code}`, "0,30");
+eq("  nothing skipped", t.skipped.length, 0);
+eq("'0' is 0x27 not 0x28", textToSteps("0").steps[0].code, 0x27);
+eq("')' is Shift+0x27",    textToSteps(")").steps[0].mods, 0x02);
+eq("space is 0x2c",        textToSteps(" ").steps[0].code, 0x2c);
+eq("unmappable char reported", textToSteps("café").skipped.join(""), "é");
+eq("  ... and the rest still converts", textToSteps("café").steps.length, 3);
+eq("over-long text flags truncation", textToSteps("a".repeat(25)).truncated, 7);
+// Every step must be encodable — no code outside the HID keyboard page.
+eq("all codes in range", textToSteps(
+   "abcXYZ 0123456789 !@#$%^&*() -=[]\;',./ _+{}|:\"~<>?"
+   ).steps.every(s => s.code >= 0x04 && s.code <= 0x38), true);
+
+
+console.log("\ndiff before write");
+const mk = () => blankProfile();
+let dev = mk(), ed = mk();
+eq("identical profiles produce no diff", diffProfiles(dev, ed, findLayout(12, 2)).length, 0);
+
+// slot 2 is physically key 7 on this hardware
+ed.layers[0].bindings[2] = { type: "key", steps: [{ mods: 0, code: 0x04 }], delay: 0 };
+let rows = diffProfiles(dev, ed, findLayout(12, 2));
+eq("adding a binding shows one row", rows.length, 1);
+eq("  named by physical position", rows[0].name, "L1 key 7");
+eq("  kind is add", rows[0].kind, "add");
+eq("  from is null", rows[0].from, null);
+
+dev.layers[0].bindings[2] = { type: "key", steps: [{ mods: 0, code: 0x04 }], delay: 0 };
+eq("same binding both sides -> no row", diffProfiles(dev, ed, findLayout(12, 2)).length, 0);
+
+ed.layers[0].bindings[2] = { type: "media", media: 0xe9 };
+rows = diffProfiles(dev, ed, findLayout(12, 2));
+eq("changed binding -> chg", rows[0].kind, "chg");
+eq("  shows the old label", rows[0].from, "A");
+eq("  shows the new label", rows[0].to, "Volume up");
+
+delete ed.layers[0].bindings[2];
+rows = diffProfiles(dev, ed, findLayout(12, 2));
+eq("removed binding -> del", rows[0].kind, "del");
+eq("  to is null", rows[0].to, null);
+
+// knobs must be named as knobs, not as keys
+dev = mk(); ed = mk();
+ed.layers[1].bindings[20] = { type: "media", media: 0xe2 };
+eq("knob rows are named properly", diffProfiles(dev, ed, findLayout(12, 2))[0].name, "L2 knob 2 press");
+ed.layers[2].bindings[16] = { type: "media", media: 0xe9 };
+eq("  ... across layers too", diffProfiles(dev, ed, findLayout(12, 2)).length, 2);
+// A binding read from the device and left untouched must never show as a change.
+dev = mk(); ed = mk();
+const raw = { type: "media", media: 0xe9, _raw: [0xfa, 16, 1, 2, 0,0,0,0,0, 1, 0xe9, 0] };
+dev.layers[0].bindings[16] = raw;
+ed.layers[0].bindings[16] = raw;
+eq("untouched read-back is not a change", diffProfiles(dev, ed, findLayout(12, 2)).length, 0);
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

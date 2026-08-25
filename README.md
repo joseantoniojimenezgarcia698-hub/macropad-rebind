@@ -1,23 +1,25 @@
 # Keypad Bench
 
-A cross-platform configurator for CH57x mini keypads — the ones sold on
-AliExpress and elsewhere with 12 keys and two knobs, which ship with a 32-bit
-Windows-only Qt application and nothing else.
+A cross-platform configurator for CH57x mini keypads and macropads — the ones
+sold on AliExpress and elsewhere, which ship with a 32-bit Windows-only
+application and nothing else.
 
 This is a single HTML file. It uses WebHID, so it configures the keypad from
 Linux, Windows, macOS or Android with nothing installed and no driver.
 
 **Supported:** vendor `0x1189`, products `8830`–`8833`, `8840`, `8842`, `8850`.
-Developed and verified against a `1189:8842` with 12 keys and 2 knobs.
+All 17 models the firmware recognises, from 2 keys up to 15 keys and 3 knobs.
+The layout is read from the device; you can also pick it by hand.
 
 ## What it does
 
-- Remap all 12 keys and both knobs (counter-clockwise, press, clockwise)
-- Three layers
+- Remap every key and knob (counter-clockwise, press, clockwise), across three layers
 - Keyboard combos and multi-step macros, media keys, mouse actions
+- **Type a string and get the macro** — capitals and symbols get their Shift automatically
 - Backlight mode and colour, per layer
-- **Read the existing configuration off the keypad** — the vendor's own
-  ecosystem can't do this
+- **Read the existing configuration off the keypad**, and write untouched
+  bindings back byte for byte
+- **See exactly what will change before you write it**
 - Export and import profiles as JSON
 
 Bindings live in the keypad's flash. Nothing runs in the background: the page
@@ -65,11 +67,13 @@ on the `uaccess` tag; a rule that adds the tag later is silently ignored.
    keyboard interface is invisible to WebHID by design.
 2. **Read from keypad** pulls the live configuration into the editor.
 3. Pick a key or knob action, choose Keyboard / Media / Mouse, and bind it. For
-   keyboard bindings, click the capture box and **press the shortcut you want** —
-   it is read off your real keyboard and converted to HID usage codes.
+   keyboard bindings you can either click the capture box and **press the
+   shortcut you want**, or type a string into **Or type the text you want** and
+   have it converted for you.
 4. Set the backlight per layer. **Apply lighting now** sends just that, without
    a full write.
-5. **Write to keypad.**
+5. **Write to keypad.** It reads the device first and shows a diff — what is on
+   each key now, and what it will become — before anything is sent.
 
 Bindings persist in `localStorage`, which is a convenience and not a backup. Use
 **Export** for anything you care about.
@@ -89,7 +93,13 @@ survive a round trip untouched.
 Extracts the message builder out of `index.html` — so the test always checks the
 file that actually ships — and asserts it against two independent sources: the
 byte vectors published in `ch57x-keyboard-tool`'s `src/keyboard/k884x.rs`, and
-records captured from real hardware. 102 assertions, no dependencies.
+records captured from real hardware. 159 assertions, no dependencies.
+
+## If the keypad looks broken
+
+If only some keys light up or respond, it has been told it is a different model.
+Press **Repair device identity** in the Reset panel. Key bindings are unaffected;
+[docs/PROTOCOL.md](docs/PROTOCOL.md) explains the cause.
 
 ## Command line
 
@@ -104,26 +114,18 @@ opening a browser.
 See [docs/PROTOCOL.md](docs/PROTOCOL.md) for the wire format, the record layout,
 the hardware geometry, and the things that are known to be dangerous.
 
-If you are working on this keypad family, the two most valuable things in that
-document are the **read-back command** (`0xFA`, which the vendor app uses and no
-open-source tool implemented) and the **`0xFC` hazard** — an undocumented command
-that makes a working keypad look broken, with a recovery that is not obvious.
+The two most useful things in there if you are working on this hardware: the
+**read-back command** (`0xFA`), and the **`0xFC` hazard** — an undocumented
+command that makes a working keypad look broken, with a recovery that is not
+obvious.
 
 ## Credits
 
-The write-side byte layout was cross-checked against
+Write-side byte layout cross-checked against
 [kriomant/ch57x-keyboard-tool](https://github.com/kriomant/ch57x-keyboard-tool)
 (MIT, © 2023 Mikhail Trishchenkov), whose unit tests carry vectors verified
-against real USB captures. This project's tests assert against those vectors
-directly. If you want a command-line tool with a YAML config, use that one — it
-is excellent, and it supports keyboards this page has never seen.
-
-The read side, the hardware geometry, the device-variant command and the LED
-findings were recovered independently by reverse-engineering the vendor's
-`MINI_KEYBOARD.exe` — which shipped with its build directory and unstripped
-object files still attached — and confirmed against hardware.
-
-No vendor code or binaries are included in this repository.
+against real USB captures — this project's tests assert against them. If you
+would rather have a command-line tool with a YAML config, use that one.
 
 ## Licence
 

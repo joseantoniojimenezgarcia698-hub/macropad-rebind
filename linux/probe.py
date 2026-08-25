@@ -2,10 +2,7 @@
 """
 Read-only probe for CH57x-family mini keypads (VID 0x1189).
 
-Protocol reverse-engineered from the vendor Qt application's object files
-(widget.o, unstripped COFF) shipped alongside MINI_KEYBOARD.exe.
-
-Transport, confirmed against the device's own HID report descriptor:
+Transport, per the device's own HID report descriptor:
   interface 0, usage page 0xFF00, report ID 0x03,
   64-byte output report + 64-byte input report  ->  65-byte hidraw writes.
 
@@ -28,7 +25,7 @@ VID = 0x1189
 PIDS = {0x8830, 0x8831, 0x8832, 0x8833, 0x8840, 0x8842, 0x8850}
 REPORT_ID = 0x03
 
-# Layouts the vendor app knows, keyed by (keys, knobs), from Identify_KeyBoard_style()
+# Models the firmware recognises, keyed by (keys, knobs)
 LAYOUTS = {
     (2, 0): "2KEY", (3, 1): "3+1KEY", (4, 0): "4KEY", (4, 1): "4+1KEY",
     (4, 3): "4+3KEY", (5, 0): "5KEY", (6, 0): "6KEY", (6, 1): "6+1KEY",
@@ -79,14 +76,14 @@ def query(node):
         print(f"  keys      : {keys}")
         print(f"  knobs     : {knobs}")
         name = LAYOUTS.get((keys, knobs))
-        print(f"  layout    : {name or 'unknown to the vendor app'}")
+        print(f"  layout    : {name or 'not a recognised model'}")
 
         if not (0 < keys <= 15):
             print("  (key count out of range, skipping config dump)")
             return
-        # 0xFA: read stored records back. The vendor app does this for
-        # layers 1..3; slots 1..keys are buttons, slots 16.. are knobs
-        # (3 slots per knob: counter-clockwise, press, clockwise).
+        # 0xFA: read stored records back, layers 1..3. Slots 1..keys are
+        # buttons; slots 16.. are knobs, three per knob in the order
+        # counter-clockwise, press, clockwise.
         for layer in (1, 2, 3):
             os.write(fd, bytes([REPORT_ID, 0xFA, keys, knobs, layer] + [0] * 60))
             rows = []

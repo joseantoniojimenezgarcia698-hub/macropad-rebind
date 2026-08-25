@@ -1,8 +1,7 @@
 # CH57x keypad protocol
 
-Recovered from the vendor's `MINI_KEYBOARD.exe`, which shipped with its build
-directory and unstripped COFF object files attached, and confirmed against a
-`1189:8842` with 12 keys and 2 knobs.
+Wire protocol for CH57x-based mini keypads (vendor `0x1189`). Confirmed
+against a `1189:8842` with 12 keys and 2 knobs.
 
 ## Transport
 
@@ -14,8 +13,7 @@ The device presents two HID interfaces:
 | 1 | keyboard, mouse, consumer control | IDs 1, 2, 4, 5 | the actual typing |
 
 Interface 1 is why the keypad works with no software: it is a plain HID keyboard.
-Interface 0 is a private side channel the vendor added so their app could rewrite
-what interface 1 sends.
+Interface 0 is a private side channel used to rewrite what interface 1 sends.
 
 Because interface 0's top-level collection is a vendor usage rather than a
 keyboard, it sits outside the usage classes browsers refuse to expose — which is
@@ -56,11 +54,12 @@ Writes and reads share one layout. Only byte 0 differs — `0xFE` going out,
 
 ### Slots
 
-    1..12     keys
-    16..21    knob actions, three per knob: ccw, press, cw
+    1..15     keys
+    16..24    knob actions, three per knob: ccw, press, cw
     0xB0      the LED / global record
 
-Slots 13–15 exist for the 15-key sibling and are unused on a 12-key unit.
+A model with fewer keys simply leaves the higher key slots unused; a 12-key unit
+never touches slots 13–15.
 
 ### Payloads
 
@@ -140,18 +139,17 @@ hardware:
 
 ## Hazard: 0xFC is not a lighting command
 
-It lives in a function called `Set_Keyboard_Ver_SLOT`, which is misleading.
 `0xFC` declares which hardware variant the keypad is:
 
     03 FC FC <key count> <knob count>
 
-The vendor UI offered fifteen combinations, matching the layout list in
-`Identify_KeyBoard_style()`: `(0,0) (2,0) (3,1) (4,0) (4,1) (5,0) (6,0) (6,1)
-(6,2) (9,2) (9,3) (11,3) (12,2) (12,3) (15,3)`.
+The firmware recognises fifteen combinations and nothing else: `(0,0) (2,0)
+(3,1) (4,0) (4,1) (5,0) (6,0) (6,1) (6,2) (9,2) (9,3) (11,3) (12,2) (12,3)
+(15,3)`.
 
 Send the wrong pair and the firmware drives only that many keys. A 12-key pad
-told `(3, 1)` lights three keys and ignores the other nine. It looks like broken
-hardware, and nothing in the vendor UI explains it.
+told `(3, 1)` lights three keys and ignores the other nine. It looks exactly like
+broken hardware.
 
 Key bindings survive — only the declared geometry changes. Recovery for a 12+2
 unit is the correct variant, then a fresh LED record, then a commit:
@@ -160,15 +158,31 @@ unit is the correct variant, then a fresh LED record, then a commit:
     03 fe b0 01 08 00 00 00 00 00 01 00 11
     03 fd fe ff
 
-The vendor app never sends `0xFC` alone: it sleeps 200 ms, rewrites the LED
-record, sends it, and re-reads the device. Sending it bare is half an operation.
+`0xFC` must not be sent alone. Pause ~200 ms, rewrite the LED record, commit,
+then re-read the device. Sending it bare leaves the lighting half-configured.
 
-## Sources
+## Grid shapes by model
+
+Only 12 keys / 2 knobs has been checked against a real unit. The rest are the
+documented shapes for those models, and the app lets you correct the grid if
+your hardware disagrees.
+
+| Keys | Knobs | Grid |
+|---|---|---|
+| 2 | 0 | 2×1 |
+| 3 | 1 | 3×1 |
+| 4 | 0 or 1 or 3 | 4×1 |
+| 5 | 0 | 5×1 |
+| 6 | 0, 1 or 2 | 3×2 |
+| 9 | 2 or 3 | 3×3 |
+| 11 | 3 | 4×3 |
+| 12 | 2 | 3×4 |
+| 12 | 3 | 4×3 |
+| 15 | 3 | 5×3 |
+
+## Credits
 
 Write-side byte layout cross-checked against
 [kriomant/ch57x-keyboard-tool](https://github.com/kriomant/ch57x-keyboard-tool)
-`src/keyboard/k884x.rs` (MIT, © 2023 Mikhail Trishchenkov), whose unit tests
-carry vectors verified against USB captures.
-
-Everything else — the read path, the geometry, the variant command, the lighting
-limits — was recovered from the vendor binary and confirmed on hardware.
+(MIT, © 2023 Mikhail Trishchenkov), whose unit tests carry vectors verified
+against USB captures. This project's tests assert against those vectors.

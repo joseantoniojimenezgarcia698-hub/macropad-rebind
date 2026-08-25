@@ -1,4 +1,4 @@
-# CH57x-based mini keypad (the MINI_KEYBOARD.exe hardware family).
+# CH57x-based mini keypads (12-key + 2-knob macropads and relatives).
 # Vendor 0x1189, product ids used across the family:
 #   8830 8831 8832 8833 8840 8842 8850
 #

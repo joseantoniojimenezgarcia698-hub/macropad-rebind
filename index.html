@@ -236,6 +236,26 @@ button.wide{width:100%;padding:.6rem .8rem}
 .presets{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.3rem}
 .presets button{font-family:var(--mono);font-size:.7rem;padding:.35rem .2rem}
 .dz{display:flex;flex-direction:column;gap:.5rem}
+dialog{
+  border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink);
+  padding:0;max-width:min(680px,92vw);width:100%;box-shadow:0 24px 60px rgba(0,0,0,.6);
+}
+dialog::backdrop{background:rgba(4,6,8,.72)}
+dialog h3{font-family:var(--disp);font-size:1.05rem;margin:0;letter-spacing:-.01em}
+.dlg-head{padding:.9rem 1.1rem;border-bottom:1px solid var(--line-soft);display:flex;justify-content:space-between;gap:1rem;align-items:baseline}
+.dlg-head .sum{font-family:var(--mono);font-size:.72rem;color:var(--dim)}
+.dlg-body{padding:.6rem 1.1rem;max-height:52vh;overflow:auto}
+.dlg-foot{padding:.8rem 1.1rem;border-top:1px solid var(--line-soft);display:flex;gap:.5rem;justify-content:flex-end}
+.diff{width:100%;border-collapse:collapse;font-size:.83rem}
+.diff th{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);
+  text-align:left;font-weight:500;padding:.4rem .5rem;border-bottom:1px solid var(--line)}
+.diff td{padding:.4rem .5rem;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.diff td.k{font-family:var(--mono);font-size:.72rem;color:var(--dim);white-space:nowrap}
+.diff td.from{color:var(--dim);text-decoration:line-through;text-decoration-color:var(--led-dim)}
+.diff td.to{color:var(--ink)}
+.diff tr.add td.to{color:var(--ok)}
+.diff tr.del td.to{color:var(--led)}
+.diff .none{color:var(--dim);font-style:italic;text-decoration:none}
 </style>
 </head>
 <body>
@@ -262,13 +282,28 @@ button.wide{width:100%;padding:.6rem .8rem}
   <p>Also note that <code>navigator.hid</code> defaults to <code>self</code> in Permissions Policy, so this page must be the top-level document: it will not work inside a cross-origin iframe.</p>
 </div>
 
+<dialog id="diffDlg">
+  <div class="dlg-head">
+    <h3>Changes to write</h3>
+    <span class="sum" id="diffSum"></span>
+  </div>
+  <div class="dlg-body" id="diffBody"></div>
+  <div class="dlg-foot">
+    <button id="diffCancel">Cancel</button>
+    <button id="diffGo" class="primary">Write these changes</button>
+  </div>
+</dialog>
+
 <main id="app">
   <!-- ============ left column ============ -->
   <div class="stack">
     <section class="card">
       <header>
-        <h2>Layout</h2>
-        <div class="tabs" id="layerTabs" role="tablist"></div>
+        <h2>Layout &mdash; <span id="layoutName">12 keys &middot; 2 knobs</span></h2>
+        <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">
+          <select id="layoutPick" title="Keypad model" style="width:auto"></select>
+          <div class="tabs" id="layerTabs" role="tablist"></div>
+        </div>
       </header>
       <div class="body">
         <div class="device">
@@ -335,6 +370,10 @@ button.wide{width:100%;padding:.6rem .8rem}
         <button id="btnClearAll" class="wide">Clear this layer in the editor</button>
         <p class="hint">Empties every binding on <b id="clearLayerName">layer 1</b> <em>in this page only</em>.
         The keypad keeps working exactly as it does now until you write.</p>
+        <button id="btnRepair" class="wide" disabled>Repair device identity</button>
+        <p class="hint">Re-declares the keypad as <b>12 keys, 2 knobs</b> and rewrites the backlight. Use this if
+        only some keys light up or respond — that means the keypad has been told it is a different model. Key
+        bindings are not affected.</p>
         <button id="btnBlank" class="wide danger" disabled>Blank this layer on the keypad</button>
         <p class="hint">Writes an empty binding to every key and knob action on
         <b id="blankLayerName">layer 1</b>, so nothing on that layer does anything. Other layers are untouched.
@@ -361,16 +400,12 @@ button.wide{width:100%;padding:.6rem .8rem}
 /* ==================================================================
    Protocol constants.
 
-   Wire format, confirmed two ways: the vendor app's own hid_write()
-   uses a 65-byte buffer (report id 0x03 + 64 data bytes), and the
-   device's report descriptor declares 64-byte in/out reports on a
-   vendor collection (usage page 0xFF00). WebHID's sendReport() takes
-   the report id separately, so payloads here are 64 bytes and index 0
-   is the command byte.
+   Wire format: the device's report descriptor declares 64-byte in and
+   out reports on report id 0x03, on a vendor collection (usage page
+   0xFF00). WebHID's sendReport() takes the report id separately, so
+   payloads here are 64 bytes and index 0 is the command byte.
 
-   Message layout for a binding, from ch57x-keyboard-tool's k884x.rs
-   (which carries unit tests against real USB captures) and matching
-   the record structure recovered from widget.o:
+   Message layout for a binding:
 
      [0]      0xFE          write
      [1]      slot id       1..15 keys, 16.. knob actions, 0xB0 = LED
@@ -390,8 +425,6 @@ const CMD_SEP    = 0xAA;   // sent as AA AA
 const TYPE_KEYBOARD = 1, TYPE_MEDIA = 2, TYPE_MOUSE = 3, TYPE_DELAY = 5;
 const LED_SLOT = 0xB0;
 
-const N_KEYS  = 12;
-const N_KNOBS = 2;
 const N_LAYERS = 3;
 const MAX_STEPS = 18;
 
@@ -468,8 +501,8 @@ const LED_MODE_CODE = { off:0, backlight:1, shock:2, shock2:3, press:4 };
    before you change that.
 
    0xFC tells the keypad which hardware variant it is. Payload is
-   [0xFC, 0xFC, keys, knobs]. The vendor UI offered the 15 combinations
-   below, matching the layout list in Identify_KeyBoard_style().
+   [0xFC, 0xFC, keys, knobs]. The firmware recognises the 15 combinations
+   below and nothing else.
 
    Send the wrong one and the firmware drives only that many keys: a
    12-key pad told (3, 1) lights three keys and ignores the other nine.
@@ -500,33 +533,64 @@ const knobSlot = (k, a) => 16 + 3 * k + a;
    Physical arrangement.
 
    Slot ids run UP each column, starting at the bottom-left — the corner
-   furthest from the knobs, which is where the key matrix begins:
+   furthest from the knobs, which is where the key matrix begins. On a
+   3-wide, 4-tall pad that is:
 
        slot 4   slot 8   slot 12      <- top row, nearest the knobs
        slot 3   slot 7   slot 11
        slot 2   slot 6   slot 10
        slot 1   slot 5   slot  9      <- bottom row
 
-   So slot = column * 4 + (4 - row), with row counted from the top.
-   Verified against this hardware: the owner's media keys sit on the
-   bottom row and read back as slots 1, 5 and 9.
+   So slot = column * rows + (rows - row), row counted from the top.
 
-   KEY_ORDER is DOM order — left to right, then top to bottom.
+   The grid shapes below come from the model list the hardware itself
+   recognises. Only 12 keys / 2 knobs has been checked against a real
+   unit; the rest are the documented shapes for those models. If your
+   pad's keys appear in the wrong places, change the shape in the UI —
+   the mapping is derived, not hardcoded.
    ------------------------------------------------------------------ */
-const GRID_ROWS = 4, GRID_COLS = 3;
-const KEY_ORDER = (() => {
-  const order = [];
-  for (let r = 0; r < GRID_ROWS; r++)
-    for (let c = 0; c < GRID_COLS; c++)
-      order.push(c * GRID_ROWS + (GRID_ROWS - r));
-  return order;                       // [4,8,12, 3,7,11, 2,6,10, 1,5,9]
-})();
+const LAYOUTS = [
+  { keys:  0, knobs: 1, cols: 0, rows: 0 },
+  { keys:  0, knobs: 2, cols: 0, rows: 0 },
+  { keys:  2, knobs: 0, cols: 2, rows: 1 },
+  { keys:  3, knobs: 1, cols: 3, rows: 1 },
+  { keys:  4, knobs: 0, cols: 4, rows: 1 },
+  { keys:  4, knobs: 1, cols: 4, rows: 1 },
+  { keys:  4, knobs: 3, cols: 4, rows: 1 },
+  { keys:  5, knobs: 0, cols: 5, rows: 1 },
+  { keys:  6, knobs: 0, cols: 3, rows: 2 },
+  { keys:  6, knobs: 1, cols: 3, rows: 2 },
+  { keys:  6, knobs: 2, cols: 3, rows: 2 },
+  { keys:  9, knobs: 2, cols: 3, rows: 3 },
+  { keys:  9, knobs: 3, cols: 3, rows: 3 },
+  { keys: 11, knobs: 3, cols: 4, rows: 3 },
+  { keys: 12, knobs: 2, cols: 3, rows: 4 },   // verified on hardware
+  { keys: 12, knobs: 3, cols: 4, rows: 3 },
+  { keys: 15, knobs: 3, cols: 5, rows: 3 },
+];
+const DEFAULT_LAYOUT = { keys: 12, knobs: 2, cols: 3, rows: 4 };
 
-/* Key 1..12 as a person reads the keypad (top-left to bottom-right) mapped
-   to the slot id the protocol uses, and back. The UI speaks positions; the
-   wire speaks slots. */
-const SLOT_OF_POS  = pos => KEY_ORDER[pos - 1];
-const POS_OF_SLOT  = new Map(KEY_ORDER.map((slot, i) => [slot, i + 1]));
+function findLayout(keys, knobs) {
+  return LAYOUTS.find(l => l.keys === keys && l.knobs === knobs) || null;
+}
+
+/** DOM order (left to right, top to bottom) -> slot id. 0 means no key. */
+function gridOrder(l) {
+  const order = [];
+  for (let r = 0; r < l.rows; r++)
+    for (let c = 0; c < l.cols; c++) {
+      const slot = c * l.rows + (l.rows - r);
+      order.push(slot <= l.keys ? slot : 0);
+    }
+  return order;
+}
+
+/** The UI speaks positions; the wire speaks slots. */
+function posOfSlot(l) {
+  const m = new Map();
+  gridOrder(l).forEach((slot, i) => { if (slot) m.set(slot, i + 1); });
+  return m;
+}
 
 /* ==================================================================
    State
@@ -542,6 +606,7 @@ function blankProfile() {
   };
 }
 
+let layout = loadLayout();
 let profile = loadProfile();
 let layer = 0;
 let sel = null;              // { slot, label }
@@ -561,6 +626,21 @@ function loadProfile() {
     return p;
   } catch { return blankProfile(); }
 }
+const LAYOUT_KEY = "keypad-bench.layout.v1";
+function loadLayout() {
+  try {
+    const raw = localStorage.getItem(LAYOUT_KEY);
+    if (!raw) return { ...DEFAULT_LAYOUT };
+    const l = JSON.parse(raw);
+    if (![l.keys, l.knobs, l.cols, l.rows].every(n => Number.isInteger(n) && n >= 0)) throw 0;
+    return l;
+  } catch { return { ...DEFAULT_LAYOUT }; }
+}
+function saveLayout() {
+  try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch { /* private mode */ }
+}
+function setLayout(l) { layout = { ...l }; saveLayout(); }
+
 function saveProfile() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(profile)); } catch { /* private mode */ }
 }
@@ -624,7 +704,7 @@ function bindingReports(slot, b) {
   if (b.type === "key") {
     const steps = b.steps.slice(0, MAX_STEPS);
     // A lone modifier-only step is sent with count 0 so it can combine
-    // with a following key — this mirrors the vendor behaviour.
+    // with a following key.
     const count = (steps.length === 1 && !steps[0].code) ? 0 : steps.length;
     const body = [];
     for (const s of steps) body.push(s.mods & 0xff, s.code || 0);
@@ -722,9 +802,9 @@ function decodeRecord(d) {
 
   if (type === TYPE_MOUSE) {
     const action = d[9], mod = d[10], buttons = d[11];
-    // 0x04 is what this device reports for a wheel binding; ch57x writes
-    // 0x03 for the same thing. Both are accepted here, and the original
-    // bytes are kept so an untouched binding round-trips exactly.
+    // Firmware reports 0x04 for a wheel binding but accepts 0x03 when
+    // writing one. Both are decoded, and the original bytes are kept so an
+    // untouched binding round-trips exactly.
     if (action === 0x01) return { type:"mouse", action:"click", buttons, mod, wheel:1, dx:0, dy:0, _raw: raw };
     if (action === 0x03 || action === 0x04)
       return { type:"mouse", action:"wheel", buttons:0, mod, wheel: s8(d[14]), dx:0, dy:0, _raw: raw };
@@ -742,6 +822,72 @@ const s8 = v => (v & 0x80) ? v - 256 : v;
 
 /** Drop the verbatim bytes — the binding no longer matches what's on the device. */
 function touch(b) { if (b) delete b._raw; }
+
+/* ------------------------------------------------------------------
+   Text to key steps.
+
+   The keypad sends scancodes, not characters, so what actually appears
+   depends on the keyboard layout of whatever machine it is plugged
+   into. This map assumes US layout; the shifted symbols below only hold
+   under that assumption.
+   ------------------------------------------------------------------ */
+const TEXT_MAP = (() => {
+  const m = new Map();
+  const put = (ch, code, shift) => m.set(ch, { code, mods: shift ? 0x02 : 0x00 });
+  for (let i = 0; i < 26; i++) {
+    put(String.fromCharCode(97 + i), 0x04 + i, false);   // a-z
+    put(String.fromCharCode(65 + i), 0x04 + i, true);    // A-Z
+  }
+  "1234567890".split("").forEach((c, i) => put(c, i === 9 ? 0x27 : 0x1e + i, false));
+  "!@#$%^&*()".split("").forEach((c, i) => put(c, i === 9 ? 0x27 : 0x1e + i, true));
+  const plain   = { " ":0x2c, "-":0x2d, "=":0x2e, "[":0x2f, "]":0x30, "\\":0x31,
+                    ";":0x33, "'":0x34, "`":0x35, ",":0x36, ".":0x37, "/":0x38,
+                    "\t":0x2b, "\n":0x28 };
+  const shifted = { "_":0x2d, "+":0x2e, "{":0x2f, "}":0x30, "|":0x31,
+                    ":":0x33, '"':0x34, "~":0x35, "<":0x36, ">":0x37, "?":0x38 };
+  for (const [c, k] of Object.entries(plain))   put(c, k, false);
+  for (const [c, k] of Object.entries(shifted)) put(c, k, true);
+  return m;
+})();
+
+/** Convert a string into key steps. Returns what it could not represent. */
+function textToSteps(text) {
+  const steps = [], skipped = [];
+  for (const ch of [...text]) {
+    const e = TEXT_MAP.get(ch);
+    if (e) steps.push({ mods: e.mods, code: e.code });
+    else if (!skipped.includes(ch)) skipped.push(ch);
+  }
+  return { steps, skipped, truncated: Math.max(0, steps.length - MAX_STEPS) };
+}
+
+/** Compare the editor against a profile read from the device. */
+function diffProfiles(fromDev, toEdit, forLayout) {
+  const pos = posOfSlot(forLayout || DEFAULT_LAYOUT);
+  const rows = [];
+  for (let l = 0; l < N_LAYERS; l++) {
+    const slots = new Set([
+      ...Object.keys(fromDev.layers[l].bindings),
+      ...Object.keys(toEdit.layers[l].bindings),
+    ].map(Number));
+    for (const slot of [...slots].sort((a, b) => a - b)) {
+      const a = fromDev.layers[l].bindings[slot] || null;
+      const b = toEdit.layers[l].bindings[slot] || null;
+      const from = a ? bindingLabel(a) : null;
+      const to   = b ? bindingLabel(b) : null;
+      if (from === to) continue;
+      rows.push({
+        layer: l, slot,
+        name: pos.has(slot)
+          ? `L${l + 1} key ${pos.get(slot)}`
+          : `L${l + 1} knob ${Math.floor((slot - 16) / 3) + 1} ${KNOB_ACTIONS[(slot - 16) % 3]}`,
+        from, to,
+        kind: !a ? "add" : !b ? "del" : "chg",
+      });
+    }
+  }
+  return rows;
+}
 
 /* ==================================================================
    Device I/O
@@ -785,6 +931,7 @@ async function connect() {
     $("btnDetect").disabled = false;
     $("btnRead").disabled = false;
     $("btnBlank").disabled = false;
+    $("btnRepair").disabled = false;
     renderLed();          // device-dependent controls take state at render time
     navigator.hid.addEventListener("disconnect", e => { if (e.device === device) disconnected(); });
   } catch (err) {
@@ -805,6 +952,7 @@ function disconnected() {
   $("btnDetect").disabled = true;
   $("btnRead").disabled = true;
   $("btnBlank").disabled = true;
+  $("btnRepair").disabled = true;
   renderLed();
   log("Device disconnected.", "w");
 }
@@ -836,11 +984,68 @@ async function send(report, label) {
   await sleep(6);
 }
 
+/** Show the diff and resolve true if the user confirms. */
+function confirmDiff(rows) {
+  return new Promise(resolve => {
+    const dlg = $("diffDlg"), body = $("diffBody");
+    const counts = rows.reduce((a, r) => (a[r.kind]++, a), { add: 0, del: 0, chg: 0 });
+    $("diffSum").textContent =
+      `${counts.add} added · ${counts.chg} changed · ${counts.del} cleared`;
+    body.textContent = "";
+    const t = document.createElement("table");
+    t.className = "diff";
+    t.innerHTML = "<thead><tr><th>Control</th><th>On the keypad</th><th>Will become</th></tr></thead>";
+    const tb = document.createElement("tbody");
+    for (const r of rows) {
+      const tr = document.createElement("tr");
+      tr.className = r.kind;
+      const td = (cls, text, none) => {
+        const c = document.createElement("td");
+        c.className = cls + (none ? " none" : "");
+        c.textContent = text;
+        return c;
+      };
+      tr.append(
+        td("k", r.name),
+        td("from", r.from ?? "unbound", !r.from),
+        td("to", r.to ?? "unbound", !r.to),
+      );
+      tb.append(tr);
+    }
+    t.append(tb);
+    body.append(t);
+
+    const done = ok => {
+      $("diffGo").onclick = null;
+      $("diffCancel").onclick = null;
+      dlg.close();
+      resolve(ok);
+    };
+    $("diffGo").onclick = () => done(true);
+    $("diffCancel").onclick = () => done(false);
+    dlg.onclose = () => resolve(false);
+    dlg.showModal();
+  });
+}
+
 async function writeAll() {
   if (!device) return;
   const btn = $("btnWrite");
   btn.disabled = true;
   try {
+    // Look before you leap: read what is actually on the device and show
+    // exactly what this write would change.
+    log("Reading current config so the changes can be shown first.", "w");
+    const onDevice = await readDeviceProfile(layout.keys, layout.knobs, false);
+    const rows = diffProfiles(onDevice, profile, layout);
+    if (!rows.length) {
+      log("Nothing to write — the keypad already matches the editor.", "g");
+      return;
+    }
+    if (!await confirmDiff(rows)) {
+      log("Write cancelled. Nothing was sent.", "w");
+      return;
+    }
     let slots = 0;
     const saved = layer;
     for (let l = 0; l < N_LAYERS; l++) {
@@ -891,8 +1096,8 @@ async function blankKeypad() {
   btn.disabled = true;
   try {
     const slots = [];
-    for (let i = 0; i < N_KEYS; i++) slots.push(keySlot(i));
-    for (let k = 0; k < N_KNOBS; k++) for (let a = 0; a < 3; a++) slots.push(knobSlot(k, a));
+    for (let i = 0; i < layout.keys; i++) slots.push(keySlot(i));
+    for (let k = 0; k < layout.knobs; k++) for (let a = 0; a < 3; a++) slots.push(knobSlot(k, a));
 
     for (const slot of slots) for (const r of emptyReports(slot, layer)) await send(r);
     curLayer().bindings = {};
@@ -902,6 +1107,30 @@ async function blankKeypad() {
     log(`Layer ${layer + 1} blanked — ${slots.length} slot(s). Lighting left alone.`, "g");
   } catch (err) {
     log("Blank failed: " + err.message, "e");
+  } finally {
+    btn.disabled = !device;
+  }
+}
+
+/** Re-declare the keypad's geometry. See DEVICE_VARIANTS for why this exists. */
+async function repairIdentity() {
+  if (!device) return;
+  const btn = $("btnRepair");
+  btn.disabled = true;
+  try {
+    log(`0xFC — declaring ${layout.keys} keys, ${layout.knobs} knobs.`, "w");
+    await send(variantReport(layout.keys, layout.knobs));
+    await sleep(250);
+    for (let l = 0; l < N_LAYERS; l++)
+      for (const r of ledReports(l, profile.layers[l].led)) await send(r);
+    await sleep(250);
+    const got = await detect();
+    if (got && got.keys === layout.keys && got.knobs === layout.knobs)
+      log(`Repaired — keypad reports ${got.keys} keys, ${got.knobs} knobs.`, "g");
+    else
+      log(`Keypad still reports ${got ? got.keys + "/" + got.knobs : "nothing"}. Try replugging it.`, "e");
+  } catch (err) {
+    log("Repair failed: " + err.message, "e");
   } finally {
     btn.disabled = !device;
   }
@@ -928,6 +1157,29 @@ async function detect() {
   return { keys, knobs };
 }
 
+/** Pull every stored record off the device and return it as a profile. */
+async function readDeviceProfile(keys, knobs, verbose) {
+  const want = keys + 3 * knobs;
+  const next = blankProfile();
+  for (let l = 0; l < N_LAYERS; l++) {
+    if (verbose) log(`0xFA — reading layer ${l + 1} (read only).`, "w");
+    const got = (await Promise.all([
+      collect(want, 2500),
+      send(msg([0xFA, keys, knobs, l + 1])),
+    ]))[0];
+    for (const d of got) {
+      // Layer 3 comes back out of order on this hardware, so trust the slot
+      // byte in the reply rather than the arrival order.
+      const slot = d[1];
+      if (!slot || slot > 21) continue;
+      const b = decodeRecord(d);
+      if (b) next.layers[l].bindings[slot] = b;
+    }
+    if (verbose) log(`layer ${l + 1}: ${got.length} record(s), ${Object.keys(next.layers[l].bindings).length} bound.`);
+  }
+  return next;
+}
+
 /** Read every stored record and load it into the editor. */
 async function readAll() {
   if (!device) return;
@@ -942,31 +1194,21 @@ async function readAll() {
       return;
     }
 
-    const layout = await detect();
-    const keys  = layout?.keys  ?? N_KEYS;
-    const knobs = layout?.knobs ?? N_KNOBS;
+    const found = await detect();
+    // Adopt whatever the device reports, so this works on any model.
+    const keys  = found?.keys  ?? layout.keys;
+    const knobs = found?.knobs ?? layout.knobs;
+    if (found && (found.keys !== layout.keys || found.knobs !== layout.knobs)) {
+      const known = findLayout(keys, knobs);
+      setLayout(known || { keys, knobs, cols: Math.min(keys, 3) || 1,
+                           rows: Math.ceil(keys / (Math.min(keys, 3) || 1)) });
+      log(`Layout adopted from the device: ${keys} keys, ${knobs} knobs` +
+          (known ? "." : " — grid shape is a guess, correct it above if the keys look wrong."), known ? "g" : "w");
+    }
     const want  = keys + 3 * knobs;
 
-    const next = blankProfile();
-    let total = 0;
-
-    for (let l = 0; l < N_LAYERS; l++) {
-      log(`0xFA — reading layer ${l + 1} (read only).`, "w");
-      const got = (await Promise.all([
-        collect(want, 2500),
-        send(msg([0xFA, keys, knobs, l + 1])),
-      ]))[0];
-
-      for (const d of got) {
-        // Layer 3 comes back out of order on this hardware, so trust the
-        // slot byte in the reply rather than the arrival order.
-        const slot = d[1];
-        if (!slot || slot > 21) continue;
-        const b = decodeRecord(d);
-        if (b) { next.layers[l].bindings[slot] = b; total++; }
-      }
-      log(`layer ${l + 1}: ${got.length} record(s), ${Object.keys(next.layers[l].bindings).length} bound.`);
-    }
+    const next = await readDeviceProfile(keys, knobs, true);
+    const total = next.layers.reduce((n, l) => n + Object.keys(l.bindings).length, 0);
 
     // Backlight is not reported by 0xFA — keep whatever was set here.
     for (let l = 0; l < N_LAYERS; l++) next.layers[l].led = profile.layers[l].led;
@@ -986,6 +1228,25 @@ async function readAll() {
 /* ==================================================================
    Rendering — device
    ================================================================== */
+function renderLayoutPick() {
+  const sel2 = $("layoutPick");
+  sel2.textContent = "";
+  let matched = false;
+  for (const l of LAYOUTS) {
+    const label = l.keys
+      ? `${l.keys} keys, ${l.knobs} knob${l.knobs === 1 ? "" : "s"} — ${l.cols}\u00d7${l.rows}`
+      : `${l.knobs} knob${l.knobs === 1 ? "" : "s"} only`;
+    const o = new Option(label, `${l.keys}/${l.knobs}`);
+    if (l.keys === layout.keys && l.knobs === layout.knobs) { o.selected = true; matched = true; }
+    sel2.append(o);
+  }
+  if (!matched) {
+    const o = new Option(`${layout.keys} keys, ${layout.knobs} knobs — not a known model`, "custom");
+    o.selected = true;
+    sel2.append(o);
+  }
+}
+
 function renderTabs() {
   const wrap = $("layerTabs");
   wrap.textContent = "";
@@ -1004,8 +1265,11 @@ function renderTabs() {
 function renderGrid() {
   const g = $("grid");
   g.textContent = "";
-  KEY_ORDER.forEach((slot, i) => {
+  g.style.gridTemplateColumns = `repeat(${Math.max(1, layout.cols)}, minmax(0, 1fr))`;
+  g.style.width = `min(100%, ${Math.max(1, layout.cols) * 112}px)`;
+  gridOrder(layout).forEach((slot, i) => {
     const pos = i + 1;
+    if (!slot) { g.append(document.createElement("div")); return; }
     const b = bindingFor(slot);
     const cap = document.createElement("button");
     cap.type = "button";
@@ -1021,12 +1285,15 @@ function renderGrid() {
     cap.onclick = () => select(slot, "Key " + pos);
     g.append(cap);
   });
+  $("layoutName").textContent = layout.keys
+    ? `${layout.keys} keys · ${layout.knobs} knob${layout.knobs === 1 ? "" : "s"}`
+    : `${layout.knobs} knob${layout.knobs === 1 ? "" : "s"}`;
 }
 
 function renderKnobs() {
   const wrap = $("knobs");
   wrap.textContent = "";
-  for (let k = 0; k < N_KNOBS; k++) {
+  for (let k = 0; k < layout.knobs; k++) {
     const box = document.createElement("div");
     box.className = "knob";
 
@@ -1134,7 +1401,8 @@ function renderEditor() {
     p.className = "hint";
     p.style.marginTop = "-.4rem";
     p.innerHTML = `Device slot <code>${sel.slot}</code>` +
-      (POS_OF_SLOT.has(sel.slot) ? ` &middot; key ${POS_OF_SLOT.get(sel.slot)} counting left to right, top to bottom` : "");
+      (posOfSlot(layout).has(sel.slot)
+        ? ` &middot; key ${posOfSlot(layout).get(sel.slot)} counting left to right, top to bottom` : "");
     host.append(p);
   }
 
@@ -1203,6 +1471,45 @@ function renderKeyEditor(host, b) {
     : "Click here, then press a key to add it";
   cap.onclick = () => { captureArmed = !captureArmed; renderEditor(); if (captureArmed) cap.focus(); };
   host.append(cap);
+
+  // ---- type a string, get the steps ----
+  const txtField = document.createElement("div");
+  txtField.className = "field";
+  txtField.innerHTML = `<label for="macroText">Or type the text you want</label>`;
+  const txtRow = document.createElement("div");
+  txtRow.className = "row";
+  const txt = document.createElement("input");
+  txt.type = "text";
+  txt.id = "macroText";
+  txt.placeholder = "e.g. order ";
+  const txtBtn = document.createElement("button");
+  txtBtn.type = "button";
+  txtBtn.textContent = "Add as steps";
+  txtBtn.style.flex = "0 0 auto";
+  const addText = () => {
+    const { steps, skipped, truncated } = textToSteps(txt.value);
+    if (!steps.length) { log("Nothing in that text could be typed.", "w"); return; }
+    const room = MAX_STEPS - b.steps.length;
+    if (room <= 0) { log(`Sequence is already full (${MAX_STEPS} steps).`, "w"); return; }
+    touch(b);
+    b.steps.push(...steps.slice(0, room));
+    if (skipped.length) log(`Skipped ${skipped.length} character(s) with no US-layout key: ${skipped.join(" ")}`, "w");
+    if (steps.length > room || truncated)
+      log(`Only the first ${room} character(s) fitted — ${MAX_STEPS} steps is the hardware limit.`, "w");
+    txt.value = "";
+    saveProfile();
+    renderAll();
+  };
+  txtBtn.onclick = addText;
+  txt.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); addText(); } };
+  txtRow.append(txt, txtBtn);
+  txtField.append(txtRow);
+  const txtHint = document.createElement("p");
+  txtHint.className = "hint";
+  txtHint.textContent = "Capitals and symbols get their Shift automatically. The keypad sends scancodes, " +
+    "so what actually appears depends on the keyboard layout of the machine it is plugged into — this assumes US.";
+  txtField.append(txtHint);
+  host.append(txtField);
 
   const modField = document.createElement("div");
   modField.className = "field";
@@ -1446,7 +1753,9 @@ $("fileImport").onchange = async e => {
 /* ==================================================================
    Wire-up
    ================================================================== */
-function renderAll() { renderTabs(); renderGrid(); renderKnobs(); renderLed(); renderEditor(); }
+function renderAll() {
+  renderLayoutPick(); renderTabs(); renderGrid(); renderKnobs(); renderLed(); renderEditor();
+}
 
 $("btnConnect").onclick = connect;
 $("btnWrite").onclick = writeAll;
@@ -1456,6 +1765,16 @@ $("btnExport").onclick = exportProfile;
 $("btnClearAll").onclick = clearEditor;
 $("btnBlank").onclick = blankKeypad;
 $("btnApplyLed").onclick = applyLed;
+$("btnRepair").onclick = repairIdentity;
+$("layoutPick").onchange = e => {
+  const [k, n] = e.target.value.split("/").map(Number);
+  const l = findLayout(k, n);
+  if (!l) return;
+  setLayout(l);
+  sel = null;
+  renderAll();
+  log(`Layout set to ${l.keys} keys, ${l.knobs} knobs (${l.cols}\u00d7${l.rows}).`);
+};
 $("btnImport").onclick = () => $("fileImport").click();
 $("btnClearLog").onclick = () => { logEl.textContent = "Cleared."; };
 $("btnClearBinding").onclick = () => {
