@@ -30,9 +30,9 @@ before you change anything.
 
 ## Will it work with my keypad?
 
-<img src="images/mykeypad.jpg"
-     alt="A 12-key, 2-knob CH57x macropad with red backlighting"
-     align="right" width="250">
+<img src="images/examplekeypad.jpg"
+     alt="A 12-key, 2-knob CH57x macropad with RGB backlighting"
+     align="right" width="260">
 
 If your keypad came with software called `MINI_KEYBOARD`, `KEY_PRO`,
 `Mini Keyboard`, or a generic unbranded `.exe`, it is almost certainly one of
@@ -229,6 +229,9 @@ would rather have a command-line tool driven by a YAML file, use that one.
 ## Licence
 
 MIT — see [LICENSE](LICENSE).
+
+The product photograph in `images/` is the manufacturer's and is not covered by
+that licence.
 
 ---
 
