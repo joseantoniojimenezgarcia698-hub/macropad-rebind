@@ -1,4 +1,4 @@
-# Rebind
+# Macropad Rebind
 
 **Configure your cheap AliExpress macropad from any browser. No install, no
 driver, no Windows.**
@@ -8,7 +8,7 @@ under a hundred different brand names — almost all use the same WCH CH57x chip
 and almost all ship with the same 32-bit Windows-only configuration tool. No
 Linux build, no macOS build, and nothing at all if you are on a Chromebook.
 
-Rebind replaces it. It is a single HTML file that talks to the keypad over
+Macropad Rebind replaces it. It is a single HTML file that talks to the keypad over
 WebHID, so it runs from Linux, Windows, macOS, ChromeOS and Android with nothing
 installed.
 
@@ -58,7 +58,7 @@ your hardware, pick the right model from the dropdown.
 
 ### 1. Open it
 
-Rebind must be served over `http://localhost` or `https://` — browsers only
+It must be served over `http://localhost` or `https://` — browsers only
 allow USB access from a secure origin.
 
 Download or clone this repo, then in that folder run:
@@ -151,7 +151,7 @@ orange, yellow, green, cyan, blue, purple or white, set per layer.
 
 ## Things worth knowing
 
-**It shows you the diff before writing.** Rebind reads the device first and
+**It shows you the diff before writing.** It reads the device first and
 lists exactly what will change on which key, so a write is never a leap of faith.
 
 **Untouched bindings are preserved byte for byte.** Anything read off the keypad
