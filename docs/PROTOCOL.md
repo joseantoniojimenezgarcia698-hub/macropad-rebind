@@ -254,15 +254,28 @@ were ruled out:
 | RGB triplets in the 38 spare record bytes (12 keys × 3 fits) | no effect |
 | The shock/shock2 animations being multi-hue | monochrome, both directions |
 
-**One unexplained observation.** During this work the owner photographed the pad
-showing green, red and yellow simultaneously. It happened once, immediately after
-pressing a key, and has never reproduced — not by any of the seven mechanisms
-above. Either a transient controller state left by an oversized write, or a
-dormant code path the newer firmware exposes properly.
+### Why a pad can still show several colours at once
 
-Anyone wanting to settle it should capture USB traffic from the 2025 vendor
-software, whose UI has a colour picker and per-key backlight controls. Whatever
-that sends is the actual answer; everything above is what it is *not*.
+The firmware drives LEDs individually — mode 4 lights exactly one key, and the
+wave modes light keys one at a time. So per-key state exists inside the firmware;
+it is only the *host* that has no way to address it.
+
+That has a visible consequence. A colour change arriving **while a wave is still
+running** leaves the keys it has already passed holding the old colour and the
+rest taking the new one, so the pad shows two colours simultaneously.
+Reproduced deliberately: set mode 2, press keys continuously, and flip the colour
+every 250 ms — a wave was observed changing from red to green partway along its
+own sequence.
+
+This is what a one-off multi-colour sighting during development turned out to be,
+and it is worth knowing because it looks exactly like per-key colour working. It
+is not: the pad is showing the seam between two global settings, not twelve
+independent ones. A single key appearing yellow fits the same mechanism — one RGB
+LED with both its red and green channels driven — though that specific case was
+not reproduced on demand.
+
+Practical upshot for a writer: don't send lighting changes in quick succession.
+Set the colour once and let the effect run.
 
 ## Hazard: 0xFC is not a lighting command
 

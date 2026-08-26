@@ -201,8 +201,13 @@ right.
 
 **Backlight** — off, steady, shock, shock2, or light-up-on-press, in red,
 orange, yellow, green, cyan, blue, purple or white, set per layer. Any colour
-works with any mode. Colour is global: [per-key colour is not reachable](docs/PROTOCOL.md#per-key-colour-not-found)
-from the host, and the protocol doc lists the seven mechanisms ruled out.
+works with any mode.
+
+Colour is global. The firmware does drive keys individually — that is how the wave
+and press effects work — but [nothing in the protocol lets the host choose
+which](docs/PROTOCOL.md#per-key-colour-not-found). Seven mechanisms were tried and
+ruled out, and the doc explains why a pad can still briefly show two colours at
+once.
 
 ---
 
