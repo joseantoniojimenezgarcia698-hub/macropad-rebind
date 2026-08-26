@@ -22,7 +22,13 @@ against a `1189:8842` with 12 keys and 2 knobs.
 > vendor/product ID plus the HID interface layout described below. A CH552G
 > running this firmware speaks this protocol; a CH57x running something else does
 > not. Note also that the wireless variants are still programmed over USB — the
-> configuration channel is the wired interface regardless.
+> configuration channel is the wired interface regardless, which retail listings
+> confirm: *"if need to use bluetooth function, please first setup when wired."*
+>
+> The Bluetooth models carry a rechargeable battery and a charge indicator, and
+> disable the backlight entirely in wireless mode to save power. A single MCU with
+> an integrated radio explains that more economically than a separate BLE module
+> alongside a CH552, which nudges those units further toward CH57x.
 
 ## Transport
 
@@ -131,7 +137,9 @@ exhaust — every key can hold a maximum-length macro at once.
 | Inter-step delay | 0–6000 ms |
 
 The record has 40 payload bytes after its 10-byte header, which is room for 20
-`(modifier, keycode)` pairs, but the firmware keeps only 18.
+`(modifier, keycode)` pairs, but the firmware keeps only 18. Retail listings for
+these keypads state the same figure — *"could enter max 18 characters one key"* —
+so the limit is deliberate, not an artefact of how the record is packed.
 
 **Overshooting is silently truncated.** Measured on a `1189:8842` by writing
 sequences of 16, 18, 19, 20, 22 and 27 steps and reading each back:

@@ -235,7 +235,8 @@ proprietary vendor protocol, documented in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 format, same 15 recognised `(keys, knobs)` models. The older `1189:8890` units are
 close but not identical.
 
-**What are the macro limits?** 18 steps per key, 0–6000 ms delay between steps,
+**What are the macro limits?** 18 steps per key — measured on hardware, and the
+same figure the retail listings quote — plus a 0–6000 ms delay between steps, and
 3 layers. There is **no shared macro pool** — every control on every layer has its
 own fixed-size record, so unlike QMK/VIA you cannot run out of total space. A
 12-key/2-knob pad holds 54 independent bindings.
