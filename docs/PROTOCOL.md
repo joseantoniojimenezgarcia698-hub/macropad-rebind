@@ -216,16 +216,39 @@ White is mode 5 with colour 0. The LEDs are genuinely RGB.
 That byte **selects** a firmware effect; it cannot describe one. There is no way
 to author a new mode without replacing the firmware.
 
-**Per-key or per-row colour is not possible.** The hardware can address keys
-individually — the press effects prove it, and a wrong variant setting lights
-only the first N keys — but the protocol never exposes it. Tested and rejected on
-hardware:
+The colour nibble only decodes **1–7**. Values 0 and 8–15 all render white, so
+white is available with any mode — white shock, white press and so on — not only
+via mode 5. Mode values 6–15 do nothing at all.
+
+Modes 2 and 3 are the same keypress-triggered wave in opposite directions, and
+both are **monochrome**: the wave takes the single configured colour.
+
+### Per-key colour: not found
+
+The hardware can address keys individually — the press effects prove it, and a
+wrong variant setting lights only the first N keys — but no way to reach that from
+the host has been found. Seven mechanisms were tried on a `1189:8842` and all
+were ruled out:
 
 | Hypothesis | Result |
 |---|---|
-| Byte 9 is a count, as it is for key macros — send 12 `(00, colour)` pairs | firmware reads the first pair, ignores the rest |
-| Per-key LED slots at `0xB1`, `0xB2`, … beside the global `0xB0` | ignored, no change |
-| Mode values 6–15 (the field is 4 bits, only 0–5 used) | nothing, all ten |
+| Byte 9 is a count, as for key macros — 12 `(00, colour)` pairs | first pair's colour applied to every key |
+| Byte 10 is a key index — 12 `(key, colour)` pairs | first pair's colour applied to every key; index ignored |
+| Per-key LED slots at `0xB1`–`0xB4` beside the global `0xB0` | no effect |
+| Mode values 6–15 | no effect |
+| Colour values 0 and 8–15 | all render white |
+| RGB triplets in the 38 spare record bytes (12 keys × 3 fits) | no effect |
+| The shock/shock2 animations being multi-hue | monochrome, both directions |
+
+**One unexplained observation.** During this work the owner photographed the pad
+showing green, red and yellow simultaneously. It happened once, immediately after
+pressing a key, and has never reproduced — not by any of the seven mechanisms
+above. Either a transient controller state left by an oversized write, or a
+dormant code path the newer firmware exposes properly.
+
+Anyone wanting to settle it should capture USB traffic from the 2025 vendor
+software, whose UI has a colour picker and per-key backlight controls. Whatever
+that sends is the actual answer; everything above is what it is *not*.
 
 ## Hazard: 0xFC is not a lighting command
 

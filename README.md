@@ -200,7 +200,9 @@ right.
 **Layers** — three complete sets of bindings.
 
 **Backlight** — off, steady, shock, shock2, or light-up-on-press, in red,
-orange, yellow, green, cyan, blue, purple or white, set per layer.
+orange, yellow, green, cyan, blue, purple or white, set per layer. Any colour
+works with any mode. Colour is global: [per-key colour is not reachable](docs/PROTOCOL.md#per-key-colour-not-found)
+from the host, and the protocol doc lists the seven mechanisms ruled out.
 
 ---
 

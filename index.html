@@ -1354,8 +1354,9 @@ function renderLed() {
   const sw = $("ledColors");
   sw.textContent = "";
   for (const [name, css, idx] of LED_COLORS) {
-    // White exists only for the steady backlight mode.
-    if (idx === 0 && led.mode !== "backlight") continue;
+    // Colour 0 renders white in every mode, not just steady backlight —
+    // measured on hardware. So white shock, white press and so on all work.
+    if (idx === 0 && led.mode === "off") continue;
     const b = document.createElement("button");
     b.type = "button";
     b.className = "swatch";
@@ -1802,7 +1803,6 @@ $("btnClearBinding").onclick = () => {
 $("ledMode").onchange = e => {
   const led = curLayer().led;
   led.mode = e.target.value;
-  if (led.mode !== "backlight" && led.color === 0) led.color = 1;
   saveProfile();
   renderLed();
 };

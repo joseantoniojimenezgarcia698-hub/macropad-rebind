@@ -346,5 +346,19 @@ console.log("\nstep cap is enforced on the wire");
   eq("textToSteps flags the overflow", t.truncated, 26 - 18);
 }
 
+
+console.log("\nwhite in every mode");
+{
+  // Measured: the colour nibble only decodes 1-7. Values 0 and 8-15 all render
+  // white, so white is available with any mode, not only steady backlight.
+  const c = (mode, color) => ledReports(0, { mode, color })[0][11];
+  eq("white + backlight keeps the captured encoding", c("backlight", 0), 0x05);
+  eq("white + shock",  c("shock", 0),  0x02);
+  eq("white + shock2", c("shock2", 0), 0x03);
+  eq("white + press",  c("press", 0),  0x04);
+  eq("off ignores colour", c("off", 0), 0x00);
+  eq("  ... even a set colour", c("off", 4), 0x00);
+}
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);
