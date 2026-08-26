@@ -245,6 +245,20 @@ silently truncates instead — it drops every step past the 18th, and a too-long
 macro simply types its first 18 actions. Measured, along with the exact byte
 behaviour, in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
+**What chip is in these? I heard many use a WCH CH552G.** Quite possibly. "CH57x"
+is the name this ecosystem settled on rather than a verified fact about the
+silicon, and the microcontroller can't be identified from software — USB
+descriptors don't carry it and the vendor software never names it. It doesn't
+affect compatibility either way: the protocol belongs to the **firmware**, not the
+chip, so what matters is the USB vendor/product ID and the HID interface layout.
+If your pad shows up as one of the IDs listed above, it should work regardless of
+what is under the lid.
+
+Note this is a different thing from the open-hardware CH552 macropads (the
+wagiminator-style boards, and similar). Those run custom firmware you flash
+yourself and are configured by reflashing — a different world entirely, and
+nothing here applies to them.
+
 **Is my data sent anywhere?** No. The page has no backend. It talks straight to
 the USB device from your browser.
 

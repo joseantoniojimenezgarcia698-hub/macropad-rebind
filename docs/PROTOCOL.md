@@ -1,7 +1,20 @@
 # CH57x keypad protocol
 
-Wire protocol for CH57x-based mini keypads (vendor `0x1189`). Confirmed
+Wire protocol for the mini keypads that identify as vendor `0x1189`. Confirmed
 against a `1189:8842` with 12 keys and 2 knobs.
+
+> **A note on "CH57x".** That name is the convention this ecosystem settled on,
+> inherited from the first tool to crack the protocol — it is not a verified
+> statement about the silicon. Some of these pads are reported to use a WCH
+> CH552G instead, and the microcontroller cannot be identified from software: USB
+> descriptors don't carry it, and the vendor application never names it. The only
+> software route would be entering the bootloader, which reports a WCH-specific
+> USB ID — and that is the one command this project refuses to send.
+>
+> It makes no practical difference. The protocol is a property of the **firmware**,
+> not the chip, and compatibility is determined by the USB vendor/product ID plus
+> the HID interface layout described below. A CH552G running this firmware speaks
+> this protocol; a CH57x running something else does not.
 
 ## Transport
 

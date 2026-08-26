@@ -1,4 +1,5 @@
-# CH57x-based mini keypads (12-key + 2-knob macropads and relatives).
+# Mini keypads / macropads identifying as USB vendor 0x1189.
+# (Commonly called "CH57x" by convention; the actual MCU varies.)
 # Vendor 0x1189, product ids used across the family:
 #   8830 8831 8832 8833 8840 8842 8850
 #
