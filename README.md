@@ -222,6 +222,32 @@ different model. Press **Repair device identity**. Your bindings are unaffected.
 
 ---
 
+## FAQ
+
+**Is this VIA or Vial?** No, and it can't be — both require QMK firmware, and
+these pads run WCH's own firmware on a CH57x. Every transport parameter differs
+too: QMK Raw HID is usage page `0xFF60`, usage `0x61`, 32-byte reports; these are
+usage page `0xFF00`, usage `0x01`, report ID `3`, 64-byte reports. It is a
+proprietary vendor protocol, documented in [docs/PROTOCOL.md](docs/PROTOCOL.md).
+
+**Do all these keypads use the same protocol?** Within the CH57x family — vendor
+`0x1189`, products `8830`–`8833`, `8840`, `8842`, `8850` — yes: same record
+format, same 15 recognised `(keys, knobs)` models. The older `1189:8890` units are
+close but not identical.
+
+**What are the macro limits?** 18 steps per key, 0–6000 ms delay between steps,
+3 layers. There is **no shared macro pool** — every control on every layer has its
+own fixed-size record, so unlike QMK/VIA you cannot run out of total space. A
+12-key/2-knob pad holds 54 independent bindings.
+
+**What happens if I exceed them?** This tool refuses and tells you. The firmware
+does not: it stores the count you gave it while silently dropping every step past
+the 18th, producing a macro that claims a length it doesn't have. See the Limits
+table in [docs/PROTOCOL.md](docs/PROTOCOL.md).
+
+**Is my data sent anywhere?** No. The page has no backend. It talks straight to
+the USB device from your browser.
+
 ## Command line
 
 `linux/probe.py` prints the keypad's current configuration. Python 3, no

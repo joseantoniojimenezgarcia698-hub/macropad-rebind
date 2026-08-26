@@ -326,5 +326,24 @@ console.log("\nREADME stays in step with the code");
   eq("  every row matches LAYOUTS", mismatch ? `${mismatch.keys}/${mismatch.knobs} is wrong or missing` : "all match", "all match");
 }
 
+
+console.log("\nstep cap is enforced on the wire");
+{
+  // Measured on a 1189:8842: the firmware keeps 18 pairs but echoes back whatever
+  // count byte it was given. Overshooting therefore produces a record that lies
+  // about its own length, so the encoder must never emit more than 18.
+  const long = { type: "key", delay: 0,
+                 steps: Array.from({length: 27}, (_, i) => ({ mods: 0, code: 0x04 + i % 26 })) };
+  const r = bindingReports(1, long)[0];
+  eq("count byte is clamped to 18", r[9], 18);
+  let pairs = 0;
+  for (let i = 0; i < 27; i++) if (r[10 + 2*i] || r[11 + 2*i]) pairs = i + 1;
+  eq("  only 18 pairs are emitted", pairs, 18);
+  eq("  nothing written past the 18th pair", r.subarray(10 + 36).every(b => b === 0), true);
+  // And text conversion must not sneak past it either.
+  const t = textToSteps("abcdefghijklmnopqrstuvwxyz");
+  eq("textToSteps flags the overflow", t.truncated, 26 - 18);
+}
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);
