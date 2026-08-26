@@ -55,7 +55,7 @@ keypad*, *12 key macro keyboard with 2 knobs*, *15 key shortcut pad*, *mini
 gaming keypad*, *one-handed keyboard*, *Photoshop shortcut pad*, *streaming
 keypad*, *volume knob keypad*.
 
-**All 17 layouts are supported**, from 2 keys up to 15 keys and 3 knobs — see
+**All 18 layouts are supported**, from 2 keys up to 15 keys and 3 knobs — see
 [Verified models](#verified-models) below. The layout is read from the keypad
 itself; if the on-screen grid doesn't match your hardware, pick the right model
 from the dropdown.
@@ -80,6 +80,7 @@ marked confirmed, or corrected.
 | — | 1 | — | — |
 | — | 2 | — | — |
 | 2 | 0 | 2×1 | — |
+| 3 | 0 | 3×1 | — |
 | 3 | 1 | 3×1 | — |
 | 4 | 0 | 4×1 | — |
 | 4 | 1 | 4×1 | — |
@@ -95,7 +96,7 @@ marked confirmed, or corrected.
 | 12 | 3 | 4×3 | — |
 | 15 | 3 | 5×3 | — |
 
-1 of 17 confirmed so far. A wrong grid is a one-line fix, and the
+1 of 18 confirmed so far. A wrong grid is a one-line fix, and the
 tests catch it immediately.
 
 ---
@@ -186,6 +187,10 @@ Up to 18 steps per key, with an optional delay between them.
 
 **Media** — volume, mute, play/pause, next, previous, stop, brightness,
 calculator, lock screen, browser navigation.
+
+> F13–F24 exist in the protocol, but the **Bluetooth variants cannot emit them** —
+> the vendor documentation says so outright. If you have a wireless model, avoid
+> those and use ordinary combinations instead.
 
 **Mouse** — left/right/middle click, wheel up/down, pointer movement, drag.
 

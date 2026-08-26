@@ -122,6 +122,16 @@ the reply rather than on arrival order.
 
 `0xFA` does not report backlight state or inter-step delays.
 
+## A newer hardware generation exists
+
+Vendor software dated mid-2025 carries UI elements this protocol has no room for:
+keys `K16`–`K27`, a `_BK` variant of each (per-key backlight), swipe gestures, a
+free colour picker, and a delay field per macro step rather than one per binding.
+
+None of it applies to the hardware documented here, and this project does not
+attempt it. It is recorded only so that anyone finding those strings knows they
+belong to later devices, not to a gap in this implementation.
+
 ## Limits
 
 There is **no shared macro pool**. Every control on every layer owns an
@@ -176,6 +186,17 @@ the knobs, where the key matrix begins:
 
 So `slot = column * 4 + (4 - row)`, with row counted from the top. Reading order
 left-to-right, top-to-bottom is therefore `4,8,12 / 3,7,11 / 2,6,10 / 1,5,9`.
+
+The vendor's own printed manual corroborates this. Its software draws the pad
+**rotated 90° clockwise** — knobs on the right, so a 3-wide by 4-tall grid appears
+as 4-wide by 3-tall — and numbers those cells 1..12 in reading order. Apply that
+rotation to the formula above and the two numberings are identical, cell for cell.
+The vendor's key numbers *are* the slot ids.
+
+**Layers are switched on the hardware,** not over the wire: a button on the left
+edge of the case cycles them, the indicator LEDs beside the knobs show which is
+live, and they flash once on each press. There is no command to change the active
+layer.
 
 Knob 1 (slots 16–18) is the **left** knob. Verified on hardware — it is not
 something you can infer from a config where both knobs are bound to volume.

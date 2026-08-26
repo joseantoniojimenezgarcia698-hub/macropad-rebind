@@ -306,6 +306,11 @@ dialog h3{font-family:var(--disp);font-size:1.05rem;margin:0;letter-spacing:-.01
         </div>
       </header>
       <div class="body">
+        <p class="hint" style="margin-bottom:.8rem">
+          Layers are switched <b>on the keypad itself</b> — the small button on its left edge. The indicator
+          LEDs beside the knobs show which layer is live, and flash once when you press it. The tabs here only
+          choose which layer you are editing.
+        </p>
         <div class="device">
           <div class="knobs" id="knobs"></div>
           <div class="grid" id="grid"></div>
@@ -453,6 +458,8 @@ const KEYS = (() => {
   for (let i = 1; i <= 9; i++) add("Num " + i, 0x59 + i - 1);
   [["Num 0",0x62],["Num .",0x63],["IntlBackslash",0x64],["Menu",0x65],
    ["Power",0x66],["Num =",0x67]].forEach(([n,c]) => add(n,c));
+  // F13-F24 exist in the protocol but the Bluetooth variants of this hardware
+  // cannot emit them — the vendor documentation says so explicitly.
   for (let i = 13; i <= 24; i++) add("F" + i, 0x68 + i - 13);
   return t;
 })();
@@ -559,6 +566,7 @@ const LAYOUTS = [
   { keys:  0, knobs: 1, cols: 0, rows: 0 },
   { keys:  0, knobs: 2, cols: 0, rows: 0 },
   { keys:  2, knobs: 0, cols: 2, rows: 1 },
+  { keys:  3, knobs: 0, cols: 3, rows: 1 },
   { keys:  3, knobs: 1, cols: 3, rows: 1 },
   { keys:  4, knobs: 0, cols: 4, rows: 1 },
   { keys:  4, knobs: 1, cols: 4, rows: 1 },
