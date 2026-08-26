@@ -351,6 +351,7 @@ console.log("\nwhite in every mode");
 {
   // Measured: the colour nibble only decodes 1-7. Values 0 and 8-15 all render
   // white, so white is available with any mode, not only steady backlight.
+  // white + press (0x04) was confirmed on hardware: pad dark, pressed key white.
   const c = (mode, color) => ledReports(0, { mode, color })[0][11];
   eq("white + backlight keeps the captured encoding", c("backlight", 0), 0x05);
   eq("white + shock",  c("shock", 0),  0x02);

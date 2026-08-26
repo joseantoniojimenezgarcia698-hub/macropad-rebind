@@ -209,16 +209,30 @@ the LED record.
     03 FE B0 <layer+1> 08 00 00 00 00 00 01 00 <code>
     03 FD FE FF
 
-Modes: 0 off, 1 steady backlight, 2 shock, 3 shock2, 4 light-up-on-press,
-5 steady white. Colours 1–7: red, orange, yellow, green, cyan, blue, purple.
-White is mode 5 with colour 0. The LEDs are genuinely RGB.
+Colours 1–7 are red, orange, yellow, green, cyan, blue, purple. The LEDs are
+genuinely RGB. All six modes observed on hardware:
+
+| Mode | At rest | On keypress |
+|---:|---|---|
+| 0 | all off | nothing |
+| 1 | all keys lit, configured colour | nothing |
+| 2 | all off | wave lights every key in turn, monochrome |
+| 3 | all off | the same wave, reversed |
+| 4 | all off | the pressed key alone lights, configured colour |
+| 5 | all keys lit white | nothing |
+
+Mode 5 is equivalent to colour 0 with mode 1 — two encodings for steady white.
 
 That byte **selects** a firmware effect; it cannot describe one. There is no way
 to author a new mode without replacing the firmware.
 
 The colour nibble only decodes **1–7**. Values 0 and 8–15 all render white, so
-white is available with any mode — white shock, white press and so on — not only
-via mode 5. Mode values 6–15 do nothing at all.
+white is available with any mode — not only via mode 5. Confirmed on hardware in
+press mode: colour 0 with mode 4 leaves the pad dark and lights the pressed key
+white. Mode values 6–15 do nothing at all.
+
+Note that mode 4 lighting only the pressed key proves the firmware addresses LEDs
+individually. The capability is there; the protocol simply never exposes it.
 
 Modes 2 and 3 are the same keypress-triggered wave in opposite directions, and
 both are **monochrome**: the wave takes the single configured colour.
