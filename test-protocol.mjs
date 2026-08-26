@@ -330,8 +330,9 @@ console.log("\nREADME stays in step with the code");
 console.log("\nstep cap is enforced on the wire");
 {
   // Measured on a 1189:8842: the firmware keeps 18 pairs but echoes back whatever
-  // count byte it was given. Overshooting therefore produces a record that lies
-  // about its own length, so the encoder must never emit more than 18.
+  // count byte it was given, so an over-long write leaves a record claiming a
+  // length it does not hold. Replay ignores that count and truncates cleanly, but
+  // the encoder still clamps so the stored record stays self-consistent.
   const long = { type: "key", delay: 0,
                  steps: Array.from({length: 27}, (_, i) => ({ mods: 0, code: 0x04 + i % 26 })) };
   const r = bindingReports(1, long)[0];

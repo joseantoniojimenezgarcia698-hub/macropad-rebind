@@ -426,11 +426,12 @@ const TYPE_KEYBOARD = 1, TYPE_MEDIA = 2, TYPE_MOUSE = 3, TYPE_DELAY = 5;
 const LED_SLOT = 0xB0;
 
 const N_LAYERS = 3;
-// Steps per key. Verified on hardware: the firmware keeps at most 18
-// (modifier, keycode) pairs. Sending more is worse than being rejected — it
-// stores the count byte you gave it verbatim while silently dropping every pair
-// past the 18th, leaving a record that claims e.g. 27 steps and holds 18. So
-// this cap is a correctness requirement, not a conservative guess.
+// Steps per key. Measured on hardware: the firmware keeps at most 18
+// (modifier, keycode) pairs. Send more and the extra pairs are dropped, though
+// the count byte is stored verbatim — so the record ends up claiming a length it
+// does not hold. On replay the firmware walks the stored pairs and ignores that
+// count, so the macro simply comes out truncated rather than corrupt. Clamping
+// here keeps the stored record honest either way.
 const MAX_STEPS = 18;
 
 /* ---- HID keyboard usage table (same ordering ch57x uses) ---- */

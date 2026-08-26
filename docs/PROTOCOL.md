@@ -112,8 +112,8 @@ exhaust — every key can hold a maximum-length macro at once.
 The record has 40 payload bytes after its 10-byte header, which is room for 20
 `(modifier, keycode)` pairs, but the firmware keeps only 18.
 
-**Overshooting is not rejected — it corrupts.** Measured on a `1189:8842` by
-writing sequences of 16, 18, 19, 20, 22 and 27 steps and reading each back:
+**Overshooting is silently truncated.** Measured on a `1189:8842` by writing
+sequences of 16, 18, 19, 20, 22 and 27 steps and reading each back:
 
 | Steps written | Count byte read back | Pairs actually stored |
 |---:|---:|---:|
@@ -125,8 +125,15 @@ writing sequences of 16, 18, 19, 20, 22 and 27 steps and reading each back:
 | 27 | 27 | **18** |
 
 The device stores the count byte verbatim while dropping every pair past the
-18th, leaving a record that claims a length it does not have. A writer must
-clamp to 18 itself; the firmware will not do it for you.
+18th, so the record claims a length it does not hold.
+
+On replay this turns out to be harmless: a 20-step macro written as `a`..`t`
+types `abcdefghijklmnopqr` — 18 characters, nothing after. The firmware walks the
+stored pairs and ignores its own count byte. So the practical answer is that a
+too-long macro comes out truncated, not garbled.
+
+A writer should still clamp to 18, so the stored record stays consistent with
+itself and any tool reading the configuration back sees the truth.
 
 ## Hardware geometry
 

@@ -241,9 +241,9 @@ own fixed-size record, so unlike QMK/VIA you cannot run out of total space. A
 12-key/2-knob pad holds 54 independent bindings.
 
 **What happens if I exceed them?** This tool refuses and tells you. The firmware
-does not: it stores the count you gave it while silently dropping every step past
-the 18th, producing a macro that claims a length it doesn't have. See the Limits
-table in [docs/PROTOCOL.md](docs/PROTOCOL.md).
+silently truncates instead — it drops every step past the 18th, and a too-long
+macro simply types its first 18 actions. Measured, along with the exact byte
+behaviour, in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
 **Is my data sent anywhere?** No. The page has no backend. It talks straight to
 the USB device from your browser.
