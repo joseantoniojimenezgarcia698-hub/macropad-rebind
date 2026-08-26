@@ -277,6 +277,47 @@ not reproduced on demand.
 Practical upshot for a writer: don't send lighting changes in quick succession.
 Set the colour once and let the effect run.
 
+## Can the firmware be dumped?
+
+No. Not usefully, and not safely on a device you rely on.
+
+Reaching the WCH ISP bootloader means sending `0xEF`. Once there, the protocol
+([documented by frank-zago/isp55e0](https://github.com/frank-zago/isp55e0/blob/master/protocol.txt))
+offers these commands:
+
+| Opcode | Command |
+|---|---|
+| `0xA1` | read chip type |
+| `0xA2` | reboot |
+| `0xA3` | set XOR key |
+| `0xA4` | code flash erase |
+| `0xA5` | code flash write |
+| `0xA6` | verify flash |
+| `0xA7` | read config (bootloader version, chip UID, config bits) |
+| `0xA8` | write config |
+| `0xA9` | data flash erase |
+| `0xAA` | data flash write |
+| `0xAB` | **data flash read** |
+
+**There is no command to read program flash.** `0xA6` re-encrypts what you send
+and compares it internally, returning only pass/fail — so it leaks nothing beyond
+a single bit per attempt, and it operates on blocks rather than bytes, which rules
+out using it as a practical oracle.
+
+`0xAB` does read *data* flash, which is where the key configuration lives. But
+that is the same information `0xFA` returns over HID, in a structured form, with
+no need to leave the application firmware at all.
+
+So the only routes to the actual firmware are physical: desolder and read the die
+with a programmer, past whatever read-protection the vendor set. Not worth it, and
+the payoff would be reversing tens of kilobytes of MCU code to look for a feature
+that may not be implemented.
+
+**And the risk is asymmetric.** `0xA2` does reboot cleanly out of the bootloader,
+so entering ISP is not automatically fatal. But there is no published firmware
+image for this hardware — so if anything goes wrong while you are in there, the
+keypad is finished, with nothing to restore. Nothing in this project sends `0xEF`.
+
 ## Hazard: 0xFC is not a lighting command
 
 `0xFC` declares which hardware variant the keypad is:
