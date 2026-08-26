@@ -11,10 +11,18 @@ against a `1189:8842` with 12 keys and 2 knobs.
 > software route would be entering the bootloader, which reports a WCH-specific
 > USB ID — and that is the one command this project refuses to send.
 >
-> It makes no practical difference. The protocol is a property of the **firmware**,
-> not the chip, and compatibility is determined by the USB vendor/product ID plus
-> the HID interface layout described below. A CH552G running this firmware speaks
-> this protocol; a CH57x running something else does not.
+> One piece of evidence does point at CH57x for at least some models: variants of
+> this family are sold with Bluetooth, and that needs a radio — which CH552 has no
+> trace of, while CH573/CH579 do. Not conclusive, since a cheap pad could pair a
+> CH552 with a separate BLE module, but it is the only positive signal available
+> without opening a case.
+>
+> It makes no practical difference either way. The protocol is a property of the
+> **firmware**, not the chip, and compatibility is determined by the USB
+> vendor/product ID plus the HID interface layout described below. A CH552G
+> running this firmware speaks this protocol; a CH57x running something else does
+> not. Note also that the wireless variants are still programmed over USB — the
+> configuration channel is the wired interface regardless.
 
 ## Transport
 
