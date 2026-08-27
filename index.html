@@ -633,6 +633,7 @@ let profile = loadProfile();
 let layer = 0;
 let sel = null;              // { slot, label }
 let device = null;
+let verified = false;      // device has answered 0xFB with a usable layout
 let captureArmed = false;
 
 function loadProfile() {
@@ -965,12 +966,31 @@ async function connect(broad) {
     if (!VENDOR_IDS.includes(device.vendorId))
       log(`Vendor ${device.vendorId.toString(16)} is not one this tool knows — ` +
           `please report it so it can be added.`, "w");
-    $("btnWrite").disabled = false;
     $("btnDetect").disabled = false;
     $("btnRead").disabled = false;
-    $("btnBlank").disabled = false;
-    $("btnRepair").disabled = false;
-    renderLed();          // device-dependent controls take state at render time
+
+    // Positively identify the protocol before enabling anything that writes.
+    // The picker filter is a convenience, not a guarantee — plenty of unrelated
+    // hardware exposes a vendor HID collection on this usage page, and writing
+    // to one of those could misconfigure it. Answering 0xFB with a plausible
+    // layout is proof the device actually speaks this protocol.
+    const found = await detect();
+    verified = !!found && found.keys <= 15 && found.knobs <= 4
+               && (found.keys + found.knobs) > 0;
+    if (verified) {
+      $("btnWrite").disabled = false;
+      $("btnBlank").disabled = false;
+      $("btnRepair").disabled = false;
+      const known = findLayout(found.keys, found.knobs);
+      if (known && (known.keys !== layout.keys || known.knobs !== layout.knobs)) {
+        setLayout(known);
+        log(`Layout adopted: ${known.keys} keys, ${known.knobs} knobs.`, "g");
+      }
+    } else {
+      log("This device did not answer 0xFB with a usable layout.", "e");
+      log("Writing stays disabled — it may not be one of these keypads. Reads are still available.", "w");
+    }
+    renderAll();
     navigator.hid.addEventListener("disconnect", e => { if (e.device === device) disconnected(); });
   } catch (err) {
     setStatus("error", "err");
@@ -985,6 +1005,7 @@ async function connect(broad) {
 
 function disconnected() {
   device = null;
+  verified = false;
   setStatus("disconnected");
   $("btnWrite").disabled = true;
   $("btnDetect").disabled = true;
@@ -1389,7 +1410,7 @@ function renderLed() {
     sw.append(b);
   }
 
-  $("btnApplyLed").disabled = !device;
+  $("btnApplyLed").disabled = !device || !verified;
   $("clearLayerName").textContent = `layer ${layer + 1}`;
   $("blankLayerName").textContent = `layer ${layer + 1}`;
   const r = ledReports(layer, led)[0];
