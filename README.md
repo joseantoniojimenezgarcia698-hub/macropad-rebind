@@ -39,16 +39,20 @@ If your keypad came with software called `MINI_KEYBOARD`, `KEY_PRO`,
 these. They all look roughly like the one on the right — a small slab of keys
 with one to three knurled knobs along the top.
 
-**Check the USB ID.** The vendor must be `1189`:
+**Check the USB ID.** The vendor is usually `1189`, sometimes `514c`:
 
 | OS | How |
 |---|---|
-| Linux | `lsusb \| grep 1189` |
+| Linux | `lsusb \| grep -Ei '1189\|514c'` |
 | macOS | System Information → USB |
 | Windows | Device Manager → Properties → Details → Hardware Ids |
 
-Supported: **`1189:8830`, `1189:8831`, `1189:8832`, `1189:8833`, `1189:8840`,
-`1189:8842`, `1189:8850`**.
+Supported product ids: **`8830`, `8831`, `8832`, `8833`, `8840`, `8842`, `8850`**,
+under vendor **`1189`** or **`514c`** — the same manufacturer ships under both.
+
+If your pad has some other vendor id, press **Device not listed?** instead of
+**Connect keypad**. That drops the vendor filter and offers any device with the
+right HID interface, and the log prints the id so it can be added.
 
 These are sold as: *3 key macro pad*, *6 key macropad with knob*, *9 key RGB
 keypad*, *12 key macro keyboard with 2 knobs*, *15 key shortcut pad*, *mini

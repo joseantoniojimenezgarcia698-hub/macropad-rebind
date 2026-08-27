@@ -1,7 +1,13 @@
 # CH57x keypad protocol
 
-Wire protocol for the mini keypads that identify as vendor `0x1189`. Confirmed
-against a `1189:8842` with 12 keys and 2 knobs.
+Wire protocol for the mini keypads that identify as vendor `0x1189` or `0x514C`.
+Confirmed against a `1189:8842` with 12 keys and 2 knobs.
+
+Both vendor ids belong to the same manufacturer and carry the same protocol and
+product ids. `0x514C` is unregistered; little-endian it reads `LQ`, matching the
+`COM.LQKJ.KEYBOARD` identifier in their macOS installer. Match on the HID
+interface rather than the vendor id alone — usage page `0xFF00`, usage `0x01` —
+since there may be further ids in the wild.
 
 > **A note on "CH57x".** That name is the convention this ecosystem settled on,
 > inherited from the first tool to crack the protocol — it is not a verified

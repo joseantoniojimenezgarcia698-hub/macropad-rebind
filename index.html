@@ -268,6 +268,7 @@ dialog h3{font-family:var(--disp);font-size:1.05rem;margin:0;letter-spacing:-.01
   <div class="top-actions">
     <span class="status" id="status">disconnected</span>
     <button id="btnConnect" class="primary">Connect keypad</button>
+    <button id="btnConnectAny" class="ghost" title="Drops the vendor-ID filter, for pads shipping under an unknown vendor id">Device not listed?</button>
     <button id="btnRead" disabled>Read from keypad</button>
     <button id="btnWrite" disabled>Write to keypad</button>
     <button id="btnExport" class="ghost">Export</button>
@@ -422,6 +423,13 @@ dialog h3{font-family:var(--disp);font-size:1.05rem;margin:0;letter-spacing:-.01
    ================================================================== */
 const REPORT_ID  = 0x03;
 const REPORT_LEN = 64;
+
+/* Vendor ids this hardware ships under. 0x1189 is the common one; 0x514C is
+   the same manufacturer under a second, unregistered id — little-endian it
+   spells "LQ", matching the LQKJ identifier in their installer. Same protocol,
+   same product ids. Reported by a user whose pad the old single-vendor filter
+   silently refused to offer. */
+const VENDOR_IDS = [0x1189, 0x514C];
 
 const CMD_WRITE  = 0xFE;
 const CMD_COMMIT = 0xFD;   // sent as FD FE FF
@@ -932,17 +940,31 @@ function setStatus(text, cls) {
   el.className = "status" + (cls ? " " + cls : "");
 }
 
-async function connect() {
+async function connect(broad) {
   try {
     const list = await navigator.hid.requestDevice({
-      filters: [{ vendorId: 0x1189, usagePage: 0xff00, usage: 0x01 }],
+      // A broad retry drops the vendor constraint entirely, so a pad shipping
+      // under some third vendor id can still be picked manually.
+      filters: broad
+        ? [{ usagePage: 0xff00, usage: 0x01 }]
+        : VENDOR_IDS.map(vendorId => ({ vendorId, usagePage: 0xff00, usage: 0x01 })),
     });
-    if (!list.length) { log("No device picked.", "w"); return; }
+    if (!list.length) {
+      log("No device picked.", "w");
+      if (!broad) log('If your keypad was not in the list at all, try "Device not listed?".', "w");
+      return;
+    }
     device = list[0];
     if (!device.opened) await device.open();
     device.addEventListener("inputreport", onInput);
     setStatus("connected", "on");
-    log(`Opened ${device.productName || "keypad"} — ${device.collections.length} collection(s).`, "g");
+    log(`Opened ${device.productName || "keypad"} — ` +
+        `${(device.vendorId || 0).toString(16).padStart(4,"0")}:` +
+        `${(device.productId || 0).toString(16).padStart(4,"0")}, ` +
+        `${device.collections.length} collection(s).`, "g");
+    if (!VENDOR_IDS.includes(device.vendorId))
+      log(`Vendor ${device.vendorId.toString(16)} is not one this tool knows — ` +
+          `please report it so it can be added.`, "w");
     $("btnWrite").disabled = false;
     $("btnDetect").disabled = false;
     $("btnRead").disabled = false;
@@ -1774,7 +1796,8 @@ function renderAll() {
   renderLayoutPick(); renderTabs(); renderGrid(); renderKnobs(); renderLed(); renderEditor();
 }
 
-$("btnConnect").onclick = connect;
+$("btnConnect").onclick = () => connect(false);
+$("btnConnectAny").onclick = () => connect(true);
 $("btnWrite").onclick = writeAll;
 $("btnDetect").onclick = detect;
 $("btnRead").onclick = readAll;
@@ -1810,6 +1833,7 @@ $("ledMode").onchange = e => {
 if (!("hid" in navigator)) {
   $("noWebHID").classList.remove("hidden");
   $("btnConnect").disabled = true;
+  $("btnConnectAny").disabled = true;
   setStatus("unsupported", "err");
 }
 

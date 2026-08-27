@@ -22,11 +22,12 @@ const core = js.slice(
 
 const mod = await import(
   "data:text/javascript;base64," +
-  Buffer.from(core + "\nexport {bindingReports, ledReports, keySlot, knobSlot, decodeRecord, touch, emptyReports, variantReport, DEVICE_VARIANTS, textToSteps, diffProfiles, blankProfile, LAYOUTS, findLayout, gridOrder, posOfSlot, DEFAULT_LAYOUT};\n").toString("base64")
+  Buffer.from(core + "\nexport {bindingReports, ledReports, keySlot, knobSlot, decodeRecord, touch, emptyReports, variantReport, DEVICE_VARIANTS, textToSteps, diffProfiles, blankProfile, LAYOUTS, findLayout, gridOrder, posOfSlot, DEFAULT_LAYOUT, VENDOR_IDS};\n").toString("base64")
 );
 const { bindingReports, ledReports, keySlot, knobSlot, decodeRecord, touch,
         emptyReports, variantReport, DEVICE_VARIANTS, textToSteps, diffProfiles,
-        blankProfile, LAYOUTS, findLayout, gridOrder, posOfSlot, DEFAULT_LAYOUT } = mod;
+        blankProfile, LAYOUTS, findLayout, gridOrder, posOfSlot, DEFAULT_LAYOUT,
+        VENDOR_IDS } = mod;
 
 let pass = 0, fail = 0;
 const hx = a => Array.from(a, b => b.toString(16).padStart(2, "0")).join(" ");
@@ -359,6 +360,18 @@ console.log("\nwhite in every mode");
   eq("white + press",  c("press", 0),  0x04);
   eq("off ignores colour", c("off", 0), 0x00);
   eq("  ... even a set colour", c("off", 4), 0x00);
+}
+
+
+console.log("\nvendor ids");
+{
+  // This hardware ships under two vendor ids. Filtering on only the common one
+  // made the browser picker offer nothing at all for the other, which reads as
+  // "no compatible device" and is indistinguishable from a broken keypad.
+  eq("0x1189 accepted", VENDOR_IDS.includes(0x1189), true);
+  eq("0x514C accepted", VENDOR_IDS.includes(0x514C), true);
+  eq("  no duplicates", new Set(VENDOR_IDS).size, VENDOR_IDS.length);
+  eq("  all are 16-bit", VENDOR_IDS.every(v => v > 0 && v <= 0xffff), true);
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

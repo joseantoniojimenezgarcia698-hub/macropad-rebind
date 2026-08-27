@@ -21,7 +21,7 @@ import glob
 import os
 import sys
 
-VID = 0x1189
+VID_LIST = (0x1189, 0x514C)
 PIDS = {0x8830, 0x8831, 0x8832, 0x8833, 0x8840, 0x8842, 0x8850}
 REPORT_ID = 0x03
 
@@ -54,7 +54,7 @@ def find_vendor_interface():
         if len(parts) != 3:
             continue
         vid, pid = int(parts[1], 16), int(parts[2], 16)
-        if vid != VID or pid not in PIDS:
+        if vid not in VID_LIST or pid not in PIDS:
             continue
         try:
             with open(os.path.join(dev, os.pardir, "bInterfaceNumber")) as fh:
