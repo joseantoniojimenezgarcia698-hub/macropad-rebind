@@ -120,7 +120,11 @@ Per slot: the record, then optionally a delay record, then `AA AA`, `FD FE FF`,
 
 ## Reading
 
-`0xFB` — send `FB FB FB`. The reply carries the key count and knob count.
+`0xFB` — send `FB FB FB`. The reply carries the key count and knob count. It
+doubles as a cheap identity check: a device that answers with a plausible layout
+speaks this protocol, whatever its vendor id claims. Worth doing before any write,
+because plenty of unrelated hardware exposes a vendor HID collection on usage page
+`0xFF00` and would happily accept bytes it does not understand.
 
 `0xFA` — send `FA <keys> <knobs> <layer>`. The device streams one record per
 slot. **Layer 3 returns its records out of order**, so key on the slot byte in

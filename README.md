@@ -168,6 +168,11 @@ nothing tells you why.
 1. Click **Connect keypad** and pick your device from the browser prompt. Only
    the configuration interface is offered; the keyboard part of the device is
    deliberately invisible to the browser.
+
+   On connecting, the tool asks the device to identify itself (`0xFB`) and only
+   enables the controls that write once it gets a sensible answer. The picker
+   filter is a convenience, not a guarantee — other hardware exposes a vendor HID
+   interface too, and writing to one of those could misconfigure it.
 2. Click **Read from keypad** to pull in what is currently programmed.
 3. Click a key or knob action, and bind it.
 4. Click **Write to keypad**.
